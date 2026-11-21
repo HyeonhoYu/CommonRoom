@@ -814,9 +814,9 @@ function getAvModel(p){const v=avOf(p.model),key=p.model+'|'+(p.skin|0)+'|'+(p.h
   const sm=AVSKIN[v.b],sk=new THREE.Color(SKINS[p.skin]||SKINS[0]),hc=new THREE.Color(HAIRC[p.hc]||HAIRC[0]);
   const tint={skin:new THREE.Color(sk.r/sm[0],sk.g/sm[1],sk.b/sm[2]),hair:hc.clone().multiplyScalar(AVHAIR[v.b])};tint.brows=tint.hair.clone().multiplyScalar(.7);
   s.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();const mt=o.material;if(mt.map)mt.map.colorSpace=THREE.SRGBColorSpace;if(tint[mt.name])mt.color.copy(tint[mt.name]);});
-  s.updateMatrixWorld(true);const box=new THREE.Box3();s.traverse(o=>{if(o.isSkinnedMesh&&o.visible&&o.material.name==='skin'){o.computeBoundingBox();box.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
+  s.updateMatrixWorld(true);const box=new THREE.Box3();s.traverse(o=>{if(o.isSkinnedMesh&&(o.material.name==='skin'||o.material.name==='shoes')){o.computeBoundingBox();box.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
   const lo=box.min.y,h=(box.max.y-lo)||1;
-  return {tpl:s,fbx:false,scale:AVH[v.b]/h,minY:lo,rot:0,own:[]};}).catch(e=>{console.warn('Avatar failed to load:',p.model,e);delete avCache[key];return null;});}
+  return {tpl:s,fbx:false,scale:AVH[v.b]/h,minY:lo-h*.025,rot:0,own:[]};}).catch(e=>{console.warn('Avatar failed to load:',p.model,e);delete avCache[key];return null;});}
 function attachModel(rec,p){const av=isAv(p.model);if(!av&&(!p.model||!charOf(p.model)))return;const ch=av?{}:charOf(p.model);
  (av?getAvModel(p):getModel(p.model)).then(m=>{if(!m||rec.dead)return;return Promise.all([loaders(),...CLIPKEYS.map(k=>getClip(k,m,ch))]).then(([L,...clips])=>{if(rec.dead)return;
   const obj=L.SU.clone(m.tpl),holder=new THREE.Group();holder.scale.setScalar(m.scale);holder.position.y=-m.minY*m.scale;holder.rotation.y=m.rot;holder.add(obj);rec.root.add(holder);rec.body.visible=false;rec.model=holder;
