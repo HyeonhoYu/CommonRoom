@@ -816,12 +816,21 @@ function getAvModel(p){const v=avOf(p.model),key=p.model+'|'+(p.skin|0)+'|'+(p.h
   s.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();const mt=o.material;if(mt.map)mt.map.colorSpace=THREE.SRGBColorSpace;if(tint[mt.name])mt.color.copy(tint[mt.name]);});
   s.updateMatrixWorld(true);const box=new THREE.Box3();s.traverse(o=>{if(o.isSkinnedMesh&&(o.material.name==='skin'||o.material.name==='shoes')){o.computeBoundingBox();box.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
   const lo=box.min.y,h=(box.max.y-lo)||1;
-  return {tpl:s,fbx:false,scale:AVH[v.b]/h,minY:lo-h*.025,rot:0,own:[]};}).catch(e=>{console.warn('Avatar failed to load:',p.model,e);delete avCache[key];return null;});}
+  return {tpl:s,fbx:false,scale:AVH[v.b]/h,minY:lo,rot:0,own:[]};}).catch(e=>{console.warn('Avatar failed to load:',p.model,e);delete avCache[key];return null;});}
+/* stand designed avatars on the floor as they actually stand in the idle animation */
+function groundAv(m,obj,holder,idle){if(m.gY==null){const mx=new THREE.AnimationMixer(obj),clip=idle&&idle.getClip(),inv=new THREE.Matrix4(),v=new THREE.Vector3(),lows=[];
+  if(clip)mx.clipAction(clip).play();
+  for(const f of clip?[0,.25,.5,.75]:[0]){if(clip)mx.setTime(f*clip.duration);obj.updateMatrixWorld(true);inv.copy(obj.matrixWorld).invert();let lo=Infinity;
+   obj.traverse(o=>{if(o.isSkinnedMesh&&o.visible&&(o.material.name==='shoes'||o.material.name==='skin')){const P=o.geometry.attributes.position;for(let i=0;i<P.count;i+=4){o.getVertexPosition(i,v);v.applyMatrix4(o.matrixWorld).applyMatrix4(inv);if(v.y<lo)lo=v.y;}}});
+   if(isFinite(lo))lows.push(lo);}
+  mx.stopAllAction();mx.uncacheRoot(obj);m.gY=lows.length?lows.reduce((a,b)=>a+b)/lows.length:m.minY;}
+ holder.position.y=-m.gY*m.scale;}
 function attachModel(rec,p){const av=isAv(p.model);if(!av&&(!p.model||!charOf(p.model)))return;const ch=av?{}:charOf(p.model);
  (av?getAvModel(p):getModel(p.model)).then(m=>{if(!m||rec.dead)return;return Promise.all([loaders(),...CLIPKEYS.map(k=>getClip(k,m,ch))]).then(([L,...clips])=>{if(rec.dead)return;
   const obj=L.SU.clone(m.tpl),holder=new THREE.Group();holder.scale.setScalar(m.scale);holder.position.y=-m.minY*m.scale;holder.rotation.y=m.rot;holder.add(obj);rec.root.add(holder);rec.body.visible=false;rec.model=holder;
   rec.mixer=new THREE.AnimationMixer(obj);rec.acts={};CLIPKEYS.forEach((k,i)=>{if(!clips[i])return;let c=fitClip(clips[i],obj,k);if(k==='hand')c=handPeak(m,obj,c);const a=rec.mixer.clipAction(c);if(k==='hand'){a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;}rec.acts[k]=a;});
   if(!rec.acts.idle&&clips[1])rec.acts.idle=rec.mixer.clipAction(standPose(m,obj,fitClip(clips[1],obj,'stand')));
+  if(av)groundAv(m,obj,holder,rec.acts.idle);
   rec.state='';});});}
 function modelAnim(rec,want,dt){const A=rec.acts;let k=A[want]?want:(want==='hand'&&A.wave?'wave':'idle');if(!A[k])k=Object.keys(A)[0];
  if(k&&k!==rec.state){const prev=A[rec.state];const a=A[k];a.reset();a.enabled=true;a.setEffectiveWeight(1);a.play();if(prev)prev.crossFadeTo(a,.25,false);rec.state=k;}
