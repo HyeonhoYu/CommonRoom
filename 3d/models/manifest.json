@@ -44,6 +44,11 @@
       "id": "tealshirt",
       "name": "Teal shirt",
       "file": "char-tealshirt.glb"
+    },
+    {
+      "id": "alex",
+      "name": "Alex",
+      "file": "char-alex.glb"
     }
   ],
   "animations": {

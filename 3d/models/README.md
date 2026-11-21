@@ -39,3 +39,7 @@ Animations (download "Without Skin"; tick "In Place" for Walking):
 Optional per character: `"rotate": 180` if the character faces backward, `"height": 1.7` to change its size, and `"animations": { ... }` to override the shared animations.
 
 When `characters` is empty, the 3D page uses the built-in characters only.
+
+## Characters made outside Mixamo
+
+- `char-alex.glb` (Alex) was built with MakeHuman/MPFB and its CC0 system assets, then given a Mixamo-compatible skeleton so the shared `anim-*.fbx` files above play on it like on the Mixamo characters.
