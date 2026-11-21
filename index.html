@@ -170,6 +170,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
   <label>Hair</label><div class="sw acc" id="swHair"></div>
   <label>Hair color</label><div class="sw" id="swHc"></div>
   <label>Outfit</label><div class="sw acc" id="swOutfit"></div>
+  <label>Pants</label><div class="sw" id="swPants"></div>
   <label>Extra</label><div class="sw acc" id="swAcc"></div>
   <div class="tabs" role="tablist">
    <button role="tab" id="tStudent" aria-selected="true">I'm a student</button>
@@ -303,6 +304,8 @@ const SKINS=['#f7d7bb','#e8b98c','#c98b5e','#8d5a3b','#5e3a26'];
 const HAIRC=['#3b2a20','#1c1c1c','#8a5a40','#d9a441','#b5462f','#9aa0a6'];
 const HAIRS=['Short','Long','Curly','Bun','Spiky','None'];
 const OUTFITS=['T-shirt','Hoodie','Dress','Button-up','Overalls'];
+const PANTS=['#2f3b52','#34518a','#1c1c1c','#5b4632','#c9b48a','#7a2e3a'];
+const cleanModel=s=>/^[\w-]{1,40}$/.test(s||'')?s:'';
 const ACCS=['None','Cap','Bow','Glasses','Beanie','Headphones','Frog hood','Frog Baby'];
 const EMO=['Wave','Clap','Thumbs up','Heart','Question'];
 const PRIV=new Set(['A','B','C','D']);
@@ -386,7 +389,7 @@ function drawAvatar(c,p,x,y,t){
  if(p.speaking){c.strokeStyle='rgba(47,200,110,.95)';c.lineWidth=3;c.beginPath();c.ellipse(0,0,15+Math.sin(t*9)*2,6.5,0,0,7);c.stroke();}
  c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.ellipse(0,0,11,4.5,0,0,7);c.fill();
  c.translate(0,-bob);
- const lg=mv?Math.sin(ph)*3:0;c.fillStyle=of===4?'#34518a':'#2f3b52';c.fillRect(-6,-9+lg*.4,5,9-lg*.4);c.fillRect(1,-9-lg*.4,5,9+lg*.4);
+ const lg=mv?Math.sin(ph)*3:0;c.fillStyle=PANTS[p.pc]||PANTS[0];c.fillRect(-6,-9+lg*.4,5,9-lg*.4);c.fillRect(1,-9-lg*.4,5,9+lg*.4);
  if(hs===1&&acc!==6){c.fillStyle=hc;c.beginPath();c.roundRect(-10,-35,20,up?20:15,6);c.fill();}
  if(of===1){c.fillStyle=col;c.beginPath();c.arc(0,-24,8,Math.PI,0);c.fill();c.filter='brightness(.8)';c.beginPath();c.arc(0,-24,6,Math.PI,0);c.fill();c.filter='none';}
  if(of===2){c.fillStyle=col;c.beginPath();c.moveTo(-7,-24);c.lineTo(7,-24);c.lineTo(12,-6);c.lineTo(-12,-6);c.closePath();c.fill();c.fillStyle='rgba(255,255,255,.35)';c.fillRect(-8,-17,16,2);}
@@ -478,9 +481,10 @@ function drawBubble(c,text,x,y){c.font='700 12px Nunito,sans-serif';const words=
 let me=null,peer=null,isHost=false,offline=false,hostConn=null,conns={},players={},others={},roomCode='',locked=false,scope='zone',curTab='chat',unread=0,lastZone='';
 const keys=new Set();
 const int=(v,max)=>{v=v|0;return v>=0&&v<max?v:0;};
-const look={name:'',color:3,skin:0,acc:0,hair:0,hc:0,outfit:0,map:'classroom'};
+const look={name:'',color:3,skin:0,acc:0,hair:0,hc:0,outfit:0,pc:0,model:'',map:'classroom'};
 try{Object.assign(look,JSON.parse(localStorage.getItem('cr_look')||'{}'));}catch(e){}
-for(const [k,a] of [['color',COLORS],['skin',SKINS],['acc',ACCS],['hair',HAIRS],['hc',HAIRC],['outfit',OUTFITS]])look[k]=int(look[k],a.length);
+for(const [k,a] of [['color',COLORS],['skin',SKINS],['acc',ACCS],['hair',HAIRS],['hc',HAIRC],['outfit',OUTFITS],['pc',PANTS]])look[k]=int(look[k],a.length);
+look.model=cleanModel(look.model);
 if(!MAPS[look.map])look.map='classroom';
 loadMap(look.map);
 function everyone(){return isHost?Object.values(players):[me,...Object.values(others)];}
@@ -494,7 +498,7 @@ function drawPrev(t=0){pc.setTransform(1,0,0,1,0,0);pc.clearRect(0,0,240,240);pc
 function swatches(el,arr,key,isText){el.innerHTML=arr.map((v,i)=>`<button type="button" data-i="${i}" aria-label="${isText?v:key+' '+(i+1)}" aria-pressed="${look[key]===i}" ${isText?'':`style="background:${v}"`}>${isText?v:''}</button>`).join('');
  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;look[key]=+b.dataset.i;for(const x of el.children)x.setAttribute('aria-pressed',x===b);drawPrev();};}
 swatches($('#swColor'),COLORS,'color');swatches($('#swSkin'),SKINS,'skin');swatches($('#swAcc'),ACCS,'acc',true);
-swatches($('#swHair'),HAIRS,'hair',true);swatches($('#swHc'),HAIRC,'hc');swatches($('#swOutfit'),OUTFITS,'outfit',true);
+swatches($('#swHair'),HAIRS,'hair',true);swatches($('#swHc'),HAIRC,'hc');swatches($('#swOutfit'),OUTFITS,'outfit',true);swatches($('#swPants'),PANTS,'pc');
 function mapSeg(el,cb){el.innerHTML=Object.keys(MAPS).map(k=>`<button type="button" data-v="${k}" aria-pressed="false">${MAPS[k].name}</button>`).join('');
  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;for(const x of el.children)x.setAttribute('aria-pressed',x===b);cb(b.dataset.v);};}
 function markSeg(el,v){for(const x of el.children)x.setAttribute('aria-pressed',x.dataset.v===v);}
@@ -506,7 +510,7 @@ const qRoom=new URLSearchParams(location.search).get('room');if(qRoom)$('#code')
 function err(m){$('#err').textContent=m||'';}
 function readLook(){look.name=clean($('#nm').value);if(!$('#nm').value.trim()){err('Please type your name first.');$('#nm').focus();return false;}
  try{localStorage.setItem('cr_look',JSON.stringify(look));}catch(e){}return true;}
-function newMe(role){return {id:'',name:look.name,color:look.color,skin:look.skin,acc:look.acc,hair:look.hair,hc:look.hc,outfit:look.outfit,x:12.5,y:22.5,rx:0,ry:0,dir:'down',moving:false,hand:false,voice:false,mic:false,speaking:false,role,seed:Math.random()*6};}
+function newMe(role){return {id:'',name:look.name,color:look.color,skin:look.skin,acc:look.acc,hair:look.hair,hc:look.hc,outfit:look.outfit,pc:look.pc,model:look.model,x:12.5,y:22.5,rx:0,ry:0,dir:'down',moving:false,hand:false,voice:false,mic:false,speaking:false,role,seed:Math.random()*6};}
 function busy(b){for(const id of ['#joinBtn','#hostBtn','#reopenBtn'])$(id).disabled=b;}
 $('#joinBtn').onclick=()=>{err();if(!readLook())return;const code=$('#code').value.trim().toUpperCase();if(code.length!==6){err('Room codes have 6 letters.');return;}
  if(typeof Peer==='undefined'){err('Could not load the connection library. Check your internet connection.');return;}busy(true);startClient(code);};
@@ -539,7 +543,7 @@ function hostRecv(c,d){if(!d||typeof d!=='object'||!me||ended)return;const p=pla
   if(d.prev&&d.prev!==c.peer&&players[d.prev]){const oc=conns[d.prev];delete conns[d.prev];delete players[d.prev];closeCall(d.prev);try{oc&&oc.close();}catch(e){}}
   conns[c.peer]=c;let x,y;const rx=+d.x,ry=+d.y;
   if(d.resume&&rx>0&&ry>0&&rx<MW&&ry<MH&&!blocked(rx,ry)){x=rx;y=ry;}else{const s=pick(SPAWN);x=s[0]+.5;y=s[1]+.5;}
-  players[c.peer]={id:c.peer,name:clean(d.name),color:int(d.color,COLORS.length),skin:int(d.skin,SKINS.length),acc:int(d.acc,ACCS.length),hair:int(d.hair,HAIRS.length),hc:int(d.hc,HAIRC.length),outfit:int(d.outfit,OUTFITS.length),x,y,rx:x,ry:y,dir:'down',moving:false,hand:!!d.hand,voice:false,mic:false,speaking:false,role:'student',seed:Math.random()*6,seen:Date.now()};
+  players[c.peer]={id:c.peer,name:clean(d.name),color:int(d.color,COLORS.length),skin:int(d.skin,SKINS.length),acc:int(d.acc,ACCS.length),hair:int(d.hair,HAIRS.length),hc:int(d.hc,HAIRC.length),outfit:int(d.outfit,OUTFITS.length),pc:int(d.pc,PANTS.length),model:cleanModel(d.model),x,y,rx:x,ry:y,dir:'down',moving:false,hand:!!d.hand,voice:false,mic:false,speaking:false,role:'student',seed:Math.random()*6,seen:Date.now()};
   const w={t:'welcome',x,y,code:roomCode,map:mapId};if(timerEnd>Date.now())Object.assign(w,{tms:timerEnd-Date.now(),tlabel:timerLabel});c.send(w);
   if(slideCur>=0)sendSlide(c,slideCur);
   sysAll(players[c.peer].name+(d.resume?' reconnected.':' joined the room.'));return;}
@@ -553,7 +557,7 @@ function sendChat(p,text,sc){text=String(text||'').trim().slice(0,300);if(!text)
  const m={t:'chat',id:p.id,name:p.name,role:p.role,text,scope:sc==='all'?'all':'zone',zone:zoneAt(p.x,p.y)};broadcast(m);deliverChat(m);}
 function sysAll(text){broadcast({t:'sys',text});sysLine(text);}
 function dropPlayer(id){if(!players[id]||id===me.id)return;const n=players[id].name;const c=conns[id];delete players[id];delete conns[id];closeCall(id);try{c&&c.close();}catch(e){}sysAll(n+' left the room.');}
-const pack=p=>[p.id,p.name,p.color,p.skin,p.acc,+p.x.toFixed(2),+p.y.toFixed(2),p.dir,+p.moving,+p.hand,+p.voice,+p.mic,+p.speaking,p.role,p.hair|0,p.hc|0,p.outfit|0];
+const pack=p=>[p.id,p.name,p.color,p.skin,p.acc,+p.x.toFixed(2),+p.y.toFixed(2),p.dir,+p.moving,+p.hand,+p.voice,+p.mic,+p.speaking,p.role,p.hair|0,p.hc|0,p.outfit|0,p.pc|0,p.model||''];
 setInterval(()=>{if(!me||!isHost||offline)return;const now=Date.now();for(const p of Object.values(players))if(p!==me&&now-(p.seen||now)>15000)dropPlayer(p.id);},2000);
 setInterval(()=>{if(me&&isHost&&!offline)saveHost();},60000);
 
@@ -567,7 +571,7 @@ function connectClient(code,retry){
  const to=setTimeout(()=>{if(!welcomed)fail('Could not reach that room. Check the code and make sure your teacher has the room open.');},retry?8000:15000);
  myPeer.on('open',id=>{if(peer!==myPeer)return;if(!me)me=newMe('student');me.id=id;
   const c=myPeer.connect('vclass-'+code,{reliable:true});hostConn=c;
-  c.on('open',()=>c.send({t:'hello',name:me.name,color:me.color,skin:me.skin,acc:me.acc,hair:me.hair,hc:me.hc,outfit:me.outfit,x:me.x,y:me.y,hand:me.hand,resume:joinedOnce,prev:prevId}));
+  c.on('open',()=>c.send({t:'hello',name:me.name,color:me.color,skin:me.skin,acc:me.acc,hair:me.hair,hc:me.hc,outfit:me.outfit,pc:me.pc,model:me.model,x:me.x,y:me.y,hand:me.hand,resume:joinedOnce,prev:prevId}));
   c.on('data',d=>{if(peer!==myPeer)return;if(d&&d.t==='welcome'){welcomed=true;done=true;clearTimeout(to);}lastHost=Date.now();clientRecv(d);});
   c.on('close',()=>{if(peer!==myPeer||ended)return;if(welcomed)lost();});});
  myPeer.on('disconnected',()=>{setTimeout(()=>{try{if(peer===myPeer&&!myPeer.destroyed)myPeer.reconnect();}catch(e){}},1000);});
@@ -592,7 +596,7 @@ function clientRecv(d){if(!d||typeof d!=='object'||!me||ended)return;
  case 'denied':busy(false);ended=true;err('This room is locked. Ask your teacher to unlock it.');try{peer.destroy();}catch(e){}break;
  case 'state':{const seen=new Set();
   for(const a of d.p){const id=a[0];if(id===me.id)continue;seen.add(id);let p=others[id];if(!p){p=others[id]={rx:a[5],ry:a[6],seed:Math.random()*6};}
-   Object.assign(p,{id,name:a[1],color:a[2],skin:a[3],acc:a[4],x:a[5],y:a[6],dir:a[7],moving:!!a[8],hand:!!a[9],voice:!!a[10],mic:!!a[11],speaking:!!a[12],role:a[13],hair:a[14]|0,hc:a[15]|0,outfit:a[16]|0});}
+   Object.assign(p,{id,name:a[1],color:a[2],skin:a[3],acc:a[4],x:a[5],y:a[6],dir:a[7],moving:!!a[8],hand:!!a[9],voice:!!a[10],mic:!!a[11],speaking:!!a[12],role:a[13],hair:a[14]|0,hc:a[15]|0,outfit:a[16]|0,pc:a[17]|0,model:cleanModel(a[18])});}
   for(const id in others)if(!seen.has(id)){delete others[id];closeCall(id);}break;}
  case 'chat':deliverChat(d);break;
  case 'sys':sysLine(d.text);break;
@@ -611,7 +615,7 @@ function clientRecv(d){if(!d||typeof d!=='object'||!me||ended)return;
 /* ---------- demo ---------- */
 const BOTN=['Ava','Liam','Mia','Noah','Zoe','Eli'],BOTL=['Hi everyone!','Our group finished part 1.','Can we move to Room B?','I have a question about the reading.','Great idea!','Is the quiz on Friday?','I think the answer is photosynthesis.','Who has the slides?'];
 function startDemo(){ended=false;loadMap(look.map);isHost=true;offline=true;roomCode='DEMO00';me=newMe('teacher');me.id='me';const s=pick(STAGE);me.x=s[0]+.5;me.y=s[1]+.5;players={me};
- BOTN.forEach((n,i)=>{const f=pick(FREE);players['bot'+i]={id:'bot'+i,name:n,color:(i*3+1)%8,skin:i%5,acc:[0,7,3,6,5,2][i],hair:i%5,hc:(i*2)%6,outfit:i%5,x:f[0]+.5,y:f[1]+.5,rx:f[0]+.5,ry:f[1]+.5,dir:'down',moving:false,hand:i===2,voice:i<3,mic:i<2,speaking:false,role:'student',bot:true,seed:i,wait:Math.random()*3};});
+ BOTN.forEach((n,i)=>{const f=pick(FREE);players['bot'+i]={id:'bot'+i,name:n,color:(i*3+1)%8,skin:i%5,acc:[0,7,3,6,5,2][i],hair:i%5,hc:(i*2)%6,outfit:i%5,pc:i%6,x:f[0]+.5,y:f[1]+.5,rx:f[0]+.5,ry:f[1]+.5,dir:'down',moving:false,hand:i===2,voice:i<3,mic:i<2,speaking:false,role:'student',bot:true,seed:i,wait:Math.random()*3};});
  enterRoom();sysLine('Practice mode: these classmates are pretend. Voice works only in a live room.');}
 let botChatT=4;
 function botTick(dt){for(const p of Object.values(players)){if(!p.bot)continue;
