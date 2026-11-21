@@ -220,7 +220,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
   <div id="stage">
    <canvas id="cv"></canvas>
    <div id="banner" class="hidden"><small>Announcement from your teacher</small><span id="bannerText"></span><button id="bannerX" aria-label="Close">Close</button></div>
-   <div id="help">Move with WASD or the arrow keys. Drag to look around, scroll or pinch to zoom, Q and E to turn. Click the floor to walk there. Press 1 to 5 to react.</div>
+   <div id="help">Move with WASD or the arrow keys. Drag to look around, scroll or pinch to zoom, Q and E to turn. Click the floor to walk there. Press 1 to 6 to react.</div>
    <div id="emotes" role="toolbar" aria-label="Reactions"></div>
    <div id="toast" style="opacity:0"></div>
    <div id="slides" class="hidden" role="region" aria-label="Shared slides">
@@ -314,7 +314,7 @@ const OUTFITS=['T-shirt','Hoodie','Dress','Button-up','Overalls'];
 const PANTS=['#2f3b52','#34518a','#1c1c1c','#5b4632','#c9b48a','#7a2e3a'];
 const cleanModel=s=>/^[\w-]{1,40}$/.test(s||'')?s:'';
 const ACCS=['None','Cap','Bow','Glasses','Beanie','Headphones','Frog hood','Frog Baby'];
-const EMO=['Wave','Clap','Thumbs up','Heart','Question'];
+const EMO=['Wave','Clap','Thumbs up','Heart','Question','Dance'];
 const PRIV=new Set(['A','B','C','D']);
 const hsh=(x,y)=>(((x*73856093)^(y*19349663))>>>0)%997;
 
@@ -441,7 +441,8 @@ function drawEmo(c,k,x,y,s=1){c.save();c.translate(x,y);c.scale(s,s);
  else if(k===1){c.save();c.scale(.85,.85);drawHand(c,-4,5,-.4);drawHand(c,4,5,.4);c.restore();c.strokeStyle='#f2b134';c.lineWidth=1.6;c.beginPath();c.moveTo(-9,-9);c.lineTo(-11,-12);c.moveTo(0,-11);c.lineTo(0,-14);c.moveTo(9,-9);c.lineTo(11,-12);c.stroke();}
  else if(k===2){c.fillStyle='#f2b134';c.strokeStyle='#8a5a00';c.lineWidth=1.2;c.beginPath();c.roundRect(-7,-2,13,10,3);c.fill();c.stroke();c.beginPath();c.roundRect(-5,-12,5,11,2.5);c.fill();c.stroke();c.fillStyle='#1d9bd1';c.fillRect(-9,-1,3,9);}
  else if(k===3){c.fillStyle='#e5484d';c.beginPath();c.moveTo(0,8);c.bezierCurveTo(-13,-1,-9,-12,0,-5);c.bezierCurveTo(9,-12,13,-1,0,8);c.fill();c.fillStyle='rgba(255,255,255,.5)';c.beginPath();c.arc(-5,-4,2,0,7);c.fill();}
- else{c.fillStyle='#1d6fd1';c.font='900 20px Nunito,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('?',0,1);}
+ else if(k===4){c.fillStyle='#1d6fd1';c.font='900 20px Nunito,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('?',0,1);}
+ else{c.fillStyle='#7a5cff';c.strokeStyle='#7a5cff';c.lineWidth=2.2;c.beginPath();c.ellipse(-5,7,3.6,2.8,-.4,0,7);c.ellipse(6,4,3.6,2.8,-.4,0,7);c.fill();c.beginPath();c.moveTo(-2,6.5);c.lineTo(-2,-8);c.lineTo(9,-11);c.lineTo(9,3.5);c.stroke();c.lineWidth=3;c.beginPath();c.moveTo(-2,-7);c.lineTo(9,-10);c.stroke();}
  c.restore();}
 function drawTile(c,x,y,v){const X=x*TS,Y=y*TS;
  if(v===1||v===6){c.fillStyle=M.wall[0];c.fillRect(X,Y,TS,TS);c.fillStyle=M.wall[1];c.fillRect(X,Y,TS,8);
@@ -738,7 +739,7 @@ function updateBoard(){if(!boardMat)return;const img=slideCur>=0?slideCache[slid
 var MODELS=null;
 const manifestReady=fetch('models/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.characters)&&j.characters.length)MODELS=j;}).catch(()=>{});
 let LD=null;const assetCache={},modelCache={},clipCache={};
-function loaders(){return LD||(LD=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/FBXLoader.js'),import('three/addons/utils/SkeletonUtils.js')]).then(([g,f,s])=>({gltf:new g.GLTFLoader(),fbx:new f.FBXLoader(),SU:s})));}
+function loaders(){return LD||(LD=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/FBXLoader.js'),import('three/addons/utils/SkeletonUtils.js'),import('three/addons/libs/meshopt_decoder.module.js')]).then(([g,f,s,mo])=>{const gl=new g.GLTFLoader();gl.setMeshoptDecoder(mo.MeshoptDecoder);return {gltf:gl,fbx:new f.FBXLoader(),SU:s};}));}
 const fileOf=spec=>String(spec).split('#')[0];
 function getAsset(spec){const f=fileOf(spec);return assetCache[f]||(assetCache[f]=loaders().then(L=>new Promise((res,rej)=>{const url='models/'+f;
  if(/\.fbx$/i.test(f))L.fbx.load(url,o=>res({scene:o,animations:o.animations||[],fbx:true}),undefined,rej);else L.gltf.load(url,g=>res({scene:g.scene,animations:g.animations||[],fbx:false}),undefined,rej);})));}
@@ -750,19 +751,29 @@ function getModel(id){const ch=charOf(id);if(!ch)return Promise.resolve(null);
   s.updateMatrixWorld(true);let lo=Infinity,hi=-Infinity;const v=new THREE.Vector3();s.traverse(o=>{if(o.isBone){o.getWorldPosition(v);lo=Math.min(lo,v.y);hi=Math.max(hi,v.y);}});
   if(!(hi>lo)){const box=new THREE.Box3().setFromObject(s);lo=box.min.y;hi=box.max.y;}else{const pad=(hi-lo)*.04;lo-=pad;hi+=pad;}const h=(hi-lo)||1;
   return {tpl:s,fbx:a.fbx,scale:(ch.height||1.62)/h,minY:lo,rot:(ch.rotate||0)*Math.PI/180,own:a.animations};}).catch(e=>{console.warn('Character model failed to load:',id,e);return null;}));}
-const CLIPKEYS=['idle','walk','wave','clap','thumbs','hand'],CLIPRX={idle:/idle/i,walk:/walk/i,wave:/wav/i,clap:/clap/i,thumbs:/thumb/i,hand:/hand|raise/i};
+const CLIPKEYS=['idle','walk','wave','clap','thumbs','hand','dance'],CLIPRX={idle:/idle/i,walk:/walk/i,wave:/wav/i,clap:/clap/i,thumbs:/thumb/i,hand:/hand|raise/i,dance:/danc/i};
 function getClip(key,m,ch){const spec=(ch.animations&&ch.animations[key])||(MODELS.animations&&MODELS.animations[key]);
  if(!spec){const c=m.own.find(c=>CLIPRX[key].test(c.name));return Promise.resolve(c?{clip:c,fbx:m.fbx}:null);}
  return clipCache[spec]||(clipCache[spec]=getAsset(spec).then(a=>{const nm=String(spec).split('#')[1];const c=(nm&&a.animations.find(x=>x.name===nm))||a.animations[0];return c?{clip:c,fbx:a.fbx}:null;}).catch(()=>null));}
-function fitClip(src,root,key,sameUnits){const names={};root.traverse(o=>{if(o.isBone)names[boneBase(o.name)]=o.name;});const tracks=[];
+function fitClip(src,root,key){const names={};let hips=null;root.traverse(o=>{if(o.isBone){names[boneBase(o.name)]=o.name;if(boneBase(o.name)==='Hips'&&!hips)hips=o;}});const tracks=[];
  for(const t of src.clip.tracks){const dot=t.name.lastIndexOf('.'),node=t.name.slice(0,dot),prop=t.name.slice(dot+1),real=names[boneBase(node)];if(!real||prop==='scale')continue;
-  if(prop==='position'){if(boneBase(node)!=='Hips'||!sameUnits)continue;const nt=t.clone();for(let i=0;i<nt.values.length;i+=3){nt.values[i]=t.values[0];nt.values[i+2]=t.values[2];}nt.name=real+'.position';tracks.push(nt);continue;}
+  if(prop==='position'){if(boneBase(node)!=='Hips'||!hips)continue;const ay=t.values[1],ry=hips.position.y,k=(ay>0&&ry>0)?ry/ay:0;if(!k||k>5||k<.2)continue;
+   const nt=t.clone();for(let i=0;i<nt.values.length;i+=3){nt.values[i]=hips.position.x;nt.values[i+1]=t.values[i+1]*k;nt.values[i+2]=hips.position.z;}nt.name=real+'.position';tracks.push(nt);continue;}
   const nt=t.clone();nt.name=real+'.'+prop;tracks.push(nt);}
  return new THREE.AnimationClip(key,src.clip.duration,tracks);}
+/* no idle file: freeze the walk at the moment the feet are closest together */
+function standPose(m,obj,walk){if(m.standF==null){const mx=new THREE.AnimationMixer(obj),a=mx.clipAction(walk);a.play();let L=null,R=null;obj.traverse(o=>{if(o.isBone){const b=boneBase(o.name);if(b==='LeftFoot')L=o;if(b==='RightFoot')R=o;}});
+  const vl=new THREE.Vector3(),vr=new THREE.Vector3();let best=0,bs=Infinity;const n=Math.max(2,Math.round(walk.duration*30));
+  for(let f=0;f<n;f++){mx.setTime(f/30);obj.updateMatrixWorld(true);if(!L||!R)break;L.getWorldPosition(vl);R.getWorldPosition(vr);const s=Math.hypot(vl.x-vr.x,vl.z-vr.z)+2*Math.abs(vl.y-vr.y);if(s<bs){bs=s;best=f;}}
+  a.stop();mx.uncacheRoot(obj);m.standF=best;}
+ const t=m.standF/30,tracks=walk.tracks.map(tr=>{const v=tr.createInterpolant().evaluate(Math.min(t,walk.duration)).slice(),T=tr.constructor;return new T(tr.name,[0,1],[...v,...v]);});
+ return new THREE.AnimationClip('idle',1,tracks);}
 function attachModel(rec,p){if(!p.model||!charOf(p.model))return;
  getModel(p.model).then(m=>{if(!m||rec.dead)return;return Promise.all([loaders(),...CLIPKEYS.map(k=>getClip(k,m,charOf(p.model)))]).then(([L,...clips])=>{if(rec.dead)return;
   const obj=L.SU.clone(m.tpl),holder=new THREE.Group();holder.scale.setScalar(m.scale);holder.position.y=-m.minY*m.scale;holder.rotation.y=m.rot;holder.add(obj);rec.root.add(holder);rec.body.visible=false;rec.model=holder;
-  rec.mixer=new THREE.AnimationMixer(obj);rec.acts={};CLIPKEYS.forEach((k,i)=>{if(clips[i])rec.acts[k]=rec.mixer.clipAction(fitClip(clips[i],obj,k,clips[i].fbx===m.fbx));});rec.state='';});});}
+  rec.mixer=new THREE.AnimationMixer(obj);rec.acts={};CLIPKEYS.forEach((k,i)=>{if(clips[i])rec.acts[k]=rec.mixer.clipAction(fitClip(clips[i],obj,k));});
+  if(!rec.acts.idle&&clips[1])rec.acts.idle=rec.mixer.clipAction(standPose(m,obj,fitClip(clips[1],obj,'stand')));
+  rec.state='';});});}
 function modelAnim(rec,want,dt){const A=rec.acts;let k=A[want]?want:(want==='hand'&&A.wave?'wave':'idle');if(!A[k])k=Object.keys(A)[0];
  if(k&&k!==rec.state){const prev=A[rec.state];const a=A[k];a.reset();a.enabled=true;a.setEffectiveWeight(1);a.play();if(prev)prev.crossFadeTo(a,.25,false);rec.state=k;}
  rec.mixer.update(dt);}
@@ -853,15 +864,16 @@ function animAvatar(p,r,dt,t){
  let da=r.th-r.root.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));r.root.rotation.y+=da*Math.min(1,dt*12);
  const mv=p===me?p.moving:(p.moving||d/Math.max(dt,1e-3)>.5);r.amp+=((mv?1:0)-r.amp)*Math.min(1,dt*10);if(mv)r.ph+=dt*9.5;
  const s=Math.sin(r.ph)*r.amp;r.legL.rotation.set(s*.65,0,0);r.legR.rotation.set(-s*.65,0,0);r.armL.rotation.set(-s*.5,0,.06);r.armR.rotation.set(s*.5,0,-.06);
- r.body.position.y=Math.abs(Math.sin(r.ph))*.045*r.amp;r.body.scale.y=1+Math.sin(t*2.2+(p.seed||0))*.006*(1-r.amp);
- const nw=performance.now(),em=(p.emo!=null&&nw<p.emoT)?p.emo:-1,ep=em>=0?1-(p.emoT-nw)/2600:0;
+ r.body.position.y=Math.abs(Math.sin(r.ph))*.045*r.amp;r.body.rotation.y=0;r.body.scale.y=1+Math.sin(t*2.2+(p.seed||0))*.006*(1-r.amp);
+ const nw=performance.now(),em=(p.emo!=null&&nw<p.emoT)?p.emo:-1,ep=em>=0?1-(p.emoT-nw)/(p.emoD||2600):0;
  if(p.hand&&em<0){r.armR.rotation.set(-2.85,0,-.12);}
  if(em===0)r.armR.rotation.set(-2.6,0,-.35+Math.sin(t*13)*.38);
  else if(em===1){const c=Math.abs(Math.sin(t*14))*.3;r.armR.rotation.set(-1.25,0,.35+c);r.armL.rotation.set(-1.25,0,-.35-c);}
  else if(em===2)r.armR.rotation.set(-1.45,0,.18);
+ else if(em===5){const w=Math.sin(t*8);r.armL.rotation.set(-2.4+w*.4,0,-.35);r.armR.rotation.set(-2.4-w*.4,0,.35);r.legL.rotation.set(Math.max(0,w)*.4,0,0);r.legR.rotation.set(Math.max(0,-w)*.4,0,0);r.body.rotation.y=Math.sin(t*4)*.4;r.body.position.y+=Math.abs(w)*.05;}
  else if(em>=3&&ep<.35)r.body.position.y+=Math.abs(Math.sin(ep*28))*.06;
  if(r.star)r.star.rotation.y=t*1.6;
- if(r.mixer){modelAnim(r,em===0?'wave':em===1?'clap':em===2?'thumbs':p.hand?'hand':mv?'walk':'idle',dt);if(r.acts.walk)r.acts.walk.timeScale=1.15;}
+ if(r.mixer){modelAnim(r,em===0?'wave':em===1?'clap':em===2?'thumbs':em===5?'dance':p.hand?'hand':mv?'walk':'idle',dt);if(r.acts.walk)r.acts.walk.timeScale=1.15;}
  r.ring.visible=!!p.speaking;if(p.speaking)r.ring.scale.setScalar(1+Math.sin(t*9)*.06);
  drawTag(r,p);r.handS.visible=!!p.hand;
  if(em>=0){const key=em+'';if(key!==r.emoKey){r.emoKey=key;const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#fff';g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=3;g.beginPath();g.arc(64,64,58,0,7);g.fill();g.stroke();drawEmo(g,em,64,64,3.2);setSpriteCanvas(r.emoS,c);}
@@ -911,7 +923,7 @@ function loop(t){if(!me)return;const dt=Math.min(.05,(t-last)/1000);last=t;
 /* ---------- input ---------- */
 addEventListener('keydown',e=>{if(!me||e.target.closest('input,textarea'))return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d','q','e'].includes(k)){keys.add(k);e.preventDefault();}
  if(k==='enter'){$('#chatIn').focus();e.preventDefault();}
- if(/^[1-5]$/.test(e.key))sendEmote(+e.key-1);});
+ if(/^[1-6]$/.test(e.key))sendEmote(+e.key-1);});
 addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 addEventListener('blur',()=>keys.clear());
 let pdn=null;const pts=new Map();
@@ -1024,7 +1036,7 @@ $('#reconLeave').onclick=()=>endRoom('');
 
 /* ---------- emotes & map switching ---------- */
 let lastEmo=0;
-function setEmote(p,k){p.emo=k;p.emoT=performance.now()+2600;}
+function setEmote(p,k){p.emo=k;p.emoD=k===5?6000:2600;p.emoT=performance.now()+p.emoD;}
 function sendEmote(k){if(!me)return;const n=performance.now();if(n-lastEmo<700)return;lastEmo=n;setEmote(me,k);if(offline)return;
  if(isHost)broadcast({t:'emote',id:me.id,k});else if(hostConn&&hostConn.open)hostConn.send({t:'emote',k});}
 $('#emotes').innerHTML=EMO.map((n,i)=>`<button type="button" data-k="${i}" title="${n} (${i+1})" aria-label="${n}"><canvas width="56" height="56"></canvas><span>${i+1}</span></button>`).join('');

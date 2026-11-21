@@ -1,4 +1,17 @@
 {
-  "characters": [],
-  "animations": {}
+  "characters": [
+    { "id": "hoodie", "name": "Black hoodie", "file": "char-hoodie.glb" },
+    { "id": "whitetee", "name": "White tee", "file": "char-whitetee.glb" },
+    { "id": "navyshirt", "name": "Navy shirt", "file": "char-navyshirt.glb" },
+    { "id": "blacksweater", "name": "Black sweater", "file": "char-blacksweater.glb" },
+    { "id": "orangesweater", "name": "Orange sweater", "file": "char-orangesweater.glb" },
+    { "id": "polo", "name": "Gray polo", "file": "char-polo.glb" },
+    { "id": "striped", "name": "Striped top", "file": "char-striped.glb" },
+    { "id": "soccer", "name": "Soccer kit", "file": "char-soccer.glb" },
+    { "id": "tealshirt", "name": "Teal shirt", "file": "char-tealshirt.glb" }
+  ],
+  "animations": {
+    "walk": "anim-walk.fbx",
+    "dance": "anim-dance.fbx"
+  }
 }

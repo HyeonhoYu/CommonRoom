@@ -213,7 +213,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
   <div id="stage">
    <canvas id="cv"></canvas>
    <div id="banner" class="hidden"><small>Announcement from your teacher</small><span id="bannerText"></span><button id="bannerX" aria-label="Close">Close</button></div>
-   <div id="help">Move with arrow keys or WASD, or click a spot to walk there. Press 1 to 5 to react.</div>
+   <div id="help">Move with arrow keys or WASD, or click a spot to walk there. Press 1 to 6 to react.</div>
    <div id="emotes" role="toolbar" aria-label="Reactions"></div>
    <div id="toast" style="opacity:0"></div>
    <div id="slides" class="hidden" role="region" aria-label="Shared slides">
@@ -307,7 +307,7 @@ const OUTFITS=['T-shirt','Hoodie','Dress','Button-up','Overalls'];
 const PANTS=['#2f3b52','#34518a','#1c1c1c','#5b4632','#c9b48a','#7a2e3a'];
 const cleanModel=s=>/^[\w-]{1,40}$/.test(s||'')?s:'';
 const ACCS=['None','Cap','Bow','Glasses','Beanie','Headphones','Frog hood','Frog Baby'];
-const EMO=['Wave','Clap','Thumbs up','Heart','Question'];
+const EMO=['Wave','Clap','Thumbs up','Heart','Question','Dance'];
 const PRIV=new Set(['A','B','C','D']);
 const hsh=(x,y)=>(((x*73856093)^(y*19349663))>>>0)%997;
 
@@ -434,7 +434,8 @@ function drawEmo(c,k,x,y,s=1){c.save();c.translate(x,y);c.scale(s,s);
  else if(k===1){c.save();c.scale(.85,.85);drawHand(c,-4,5,-.4);drawHand(c,4,5,.4);c.restore();c.strokeStyle='#f2b134';c.lineWidth=1.6;c.beginPath();c.moveTo(-9,-9);c.lineTo(-11,-12);c.moveTo(0,-11);c.lineTo(0,-14);c.moveTo(9,-9);c.lineTo(11,-12);c.stroke();}
  else if(k===2){c.fillStyle='#f2b134';c.strokeStyle='#8a5a00';c.lineWidth=1.2;c.beginPath();c.roundRect(-7,-2,13,10,3);c.fill();c.stroke();c.beginPath();c.roundRect(-5,-12,5,11,2.5);c.fill();c.stroke();c.fillStyle='#1d9bd1';c.fillRect(-9,-1,3,9);}
  else if(k===3){c.fillStyle='#e5484d';c.beginPath();c.moveTo(0,8);c.bezierCurveTo(-13,-1,-9,-12,0,-5);c.bezierCurveTo(9,-12,13,-1,0,8);c.fill();c.fillStyle='rgba(255,255,255,.5)';c.beginPath();c.arc(-5,-4,2,0,7);c.fill();}
- else{c.fillStyle='#1d6fd1';c.font='900 20px Nunito,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('?',0,1);}
+ else if(k===4){c.fillStyle='#1d6fd1';c.font='900 20px Nunito,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('?',0,1);}
+ else{c.fillStyle='#7a5cff';c.strokeStyle='#7a5cff';c.lineWidth=2.2;c.beginPath();c.ellipse(-5,7,3.6,2.8,-.4,0,7);c.ellipse(6,4,3.6,2.8,-.4,0,7);c.fill();c.beginPath();c.moveTo(-2,6.5);c.lineTo(-2,-8);c.lineTo(9,-11);c.lineTo(9,3.5);c.stroke();c.lineWidth=3;c.beginPath();c.moveTo(-2,-7);c.lineTo(9,-10);c.stroke();}
  c.restore();}
 function drawTile(c,x,y,v){const X=x*TS,Y=y*TS;
  if(v===1||v===6){c.fillStyle=M.wall[0];c.fillRect(X,Y,TS,TS);c.fillStyle=M.wall[1];c.fillRect(X,Y,TS,8);
@@ -671,14 +672,14 @@ function draw(t){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#1a2a24';ctx.fillR
   if(p.voice){ctx.fillStyle=p.mic?'#4cd38a':'#ff6b6b';ctx.beginPath();ctx.arc(x+w/2-9,y+12.5,3.5,0,7);ctx.fill();}
   if(p.hand)drawHand(ctx,x+14,y-(p.acc>=6?52:44));
   const nw=performance.now();
-  if(p.emo!=null&&nw<p.emoT){const e=1-(p.emoT-nw)/2600,a=Math.min(1,e*7),s=a*(1+.18*Math.sin(a*Math.PI)),ex=x-19,ey=y-54-e*12;
+  if(p.emo!=null&&nw<p.emoT){const e=1-(p.emoT-nw)/(p.emoD||2600),a=Math.min(1,e*7),s=a*(1+.18*Math.sin(a*Math.PI)),ex=x-19,ey=y-54-e*12;
    ctx.globalAlpha=e>.85?(1-e)/.15:1;ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(ex,ey,14*s,0,7);ctx.fill();ctx.stroke();drawEmo(ctx,p.emo,ex,ey,s*.85);ctx.globalAlpha=1;}
   if(p.bubble&&nw<p.bubbleT)drawBubble(ctx,p.bubble,x,y-(p.acc===2||p.acc===4||p.acc>=6?55:46));}}
 
 /* ---------- input ---------- */
 addEventListener('keydown',e=>{if(!me||e.target.closest('input,textarea'))return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();}
  if(k==='enter'){$('#chatIn').focus();e.preventDefault();}
- if(/^[1-5]$/.test(e.key))sendEmote(+e.key-1);});
+ if(/^[1-6]$/.test(e.key))sendEmote(+e.key-1);});
 addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 addEventListener('blur',()=>keys.clear());
 cv.addEventListener('pointerdown',e=>{if(!me)return;const r=cv.getBoundingClientRect();const wx=(e.clientX-r.left)/zoom+camX,wy=(e.clientY-r.top)/zoom+camY;
@@ -776,7 +777,7 @@ $('#reconLeave').onclick=()=>endRoom('');
 
 /* ---------- emotes & map switching ---------- */
 let lastEmo=0;
-function setEmote(p,k){p.emo=k;p.emoT=performance.now()+2600;}
+function setEmote(p,k){p.emo=k;p.emoD=k===5?6000:2600;p.emoT=performance.now()+p.emoD;}
 function sendEmote(k){if(!me)return;const n=performance.now();if(n-lastEmo<700)return;lastEmo=n;setEmote(me,k);if(offline)return;
  if(isHost)broadcast({t:'emote',id:me.id,k});else if(hostConn&&hostConn.open)hostConn.send({t:'emote',k});}
 $('#emotes').innerHTML=EMO.map((n,i)=>`<button type="button" data-k="${i}" title="${n} (${i+1})" aria-label="${n}"><canvas width="56" height="56"></canvas><span>${i+1}</span></button>`).join('');
