@@ -761,6 +761,14 @@ function fitClip(src,root,key){const names={};let hips=null;root.traverse(o=>{if
    const nt=t.clone();for(let i=0;i<nt.values.length;i+=3){nt.values[i]=hips.position.x;nt.values[i+1]=t.values[i+1]*k;nt.values[i+2]=hips.position.z;}nt.name=real+'.position';tracks.push(nt);continue;}
   const nt=t.clone();nt.name=real+'.'+prop;tracks.push(nt);}
  return new THREE.AnimationClip(key,src.clip.duration,tracks);}
+/* hand raise: play up to the moment the hand is highest, then hold */
+function handPeak(m,obj,clip){if(m.handT==null){const mx=new THREE.AnimationMixer(obj),a=mx.clipAction(clip);a.play();const hs=[];obj.traverse(o=>{if(o.isBone&&/^(Left|Right)Hand$/.test(boneBase(o.name)))hs.push(o);});
+  const v=new THREE.Vector3();let best=clip.duration,by=-Infinity;const n=Math.max(2,Math.round(clip.duration*30));
+  for(let f=0;f<=n;f++){mx.setTime(f/30);obj.updateMatrixWorld(true);for(const b of hs){b.getWorldPosition(v);if(v.y>by+1e-4){by=v.y;best=f/30;}}}
+  a.stop();mx.uncacheRoot(obj);m.handT=Math.max(.3,Math.min(best,clip.duration));}
+ const te=m.handT,tracks=clip.tracks.map(tr=>{const n=tr.getValueSize(),times=[],vals=[];for(let i=0;i<tr.times.length&&tr.times[i]<te;i++){times.push(tr.times[i]);for(let j=0;j<n;j++)vals.push(tr.values[i*n+j]);}
+  times.push(te);vals.push(...tr.createInterpolant().evaluate(te));return new tr.constructor(tr.name,times,vals);});
+ return new THREE.AnimationClip('hand',te,tracks);}
 /* no idle file: freeze the walk at the moment the feet are closest together */
 function standPose(m,obj,walk){if(m.standF==null){const mx=new THREE.AnimationMixer(obj),a=mx.clipAction(walk);a.play();let L=null,R=null;obj.traverse(o=>{if(o.isBone){const b=boneBase(o.name);if(b==='LeftFoot')L=o;if(b==='RightFoot')R=o;}});
   const vl=new THREE.Vector3(),vr=new THREE.Vector3();let best=0,bs=Infinity;const n=Math.max(2,Math.round(walk.duration*30));
@@ -771,7 +779,7 @@ function standPose(m,obj,walk){if(m.standF==null){const mx=new THREE.AnimationMi
 function attachModel(rec,p){if(!p.model||!charOf(p.model))return;
  getModel(p.model).then(m=>{if(!m||rec.dead)return;return Promise.all([loaders(),...CLIPKEYS.map(k=>getClip(k,m,charOf(p.model)))]).then(([L,...clips])=>{if(rec.dead)return;
   const obj=L.SU.clone(m.tpl),holder=new THREE.Group();holder.scale.setScalar(m.scale);holder.position.y=-m.minY*m.scale;holder.rotation.y=m.rot;holder.add(obj);rec.root.add(holder);rec.body.visible=false;rec.model=holder;
-  rec.mixer=new THREE.AnimationMixer(obj);rec.acts={};CLIPKEYS.forEach((k,i)=>{if(clips[i])rec.acts[k]=rec.mixer.clipAction(fitClip(clips[i],obj,k));});
+  rec.mixer=new THREE.AnimationMixer(obj);rec.acts={};CLIPKEYS.forEach((k,i)=>{if(!clips[i])return;let c=fitClip(clips[i],obj,k);if(k==='hand')c=handPeak(m,obj,c);const a=rec.mixer.clipAction(c);if(k==='hand'){a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;}rec.acts[k]=a;});
   if(!rec.acts.idle&&clips[1])rec.acts.idle=rec.mixer.clipAction(standPose(m,obj,fitClip(clips[1],obj,'stand')));
   rec.state='';});});}
 function modelAnim(rec,want,dt){const A=rec.acts;let k=A[want]?want:(want==='hand'&&A.wave?'wave':'idle');if(!A[k])k=Object.keys(A)[0];
