@@ -166,7 +166,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
    <div>
     <label for="nm">Your name</label>
     <input id="nm" type="text" maxlength="20" placeholder="e.g. Jordan" autocomplete="off">
-    <label>Color</label><div class="sw" id="swColor"></div>
+    <label>Your color <span style="font-weight:600;opacity:.7">(name tag and people list)</span></label><div class="sw" id="swColor"></div>
     <label>Skin</label><div class="sw" id="swSkin"></div>
    </div>
   </div>
@@ -916,10 +916,11 @@ function buildAvatar(p,parent){
  const rec={root,body,legL,legR,armL,armR,head,star,ring,tag,handS,emoS,bub,sig:lookSig(p),y:0,ph:0,amp:0,th:null,px:p.rx,py:p.ry,tagKey:'',emoKey:'',bubKey:''};attachModel(rec,p);return rec;}
 function disposeAvatar(r){r.dead=true;if(r.mixer)r.mixer.stopAllAction();if(r.root.parent)r.root.parent.remove(r.root);r.root.traverse(o=>{if(o.isSprite){o.material.map.dispose();o.material.dispose();}else if(o.material&&o.material.isMeshBasicMaterial)o.material.dispose();});}
 const dirAng=d=>d==='up'?Math.PI:d==='left'?-Math.PI/2:d==='right'?Math.PI/2:0;
-function drawTag(r,p){const label=p.name+(p.role==='teacher'?' (Teacher)':'');const key=label+'|'+p.voice+p.mic+(p===me)+p.role;if(key===r.tagKey)return;r.tagKey=key;
- const c=document.createElement('canvas');c.width=512;c.height=104;const g=c.getContext('2d');g.font='800 40px Nunito,sans-serif';const w=Math.min(500,g.measureText(label).width+44+(p.voice?34:0));
+function drawTag(r,p){const label=p.name+(p.role==='teacher'?' (Teacher)':'');const key=label+'|'+p.voice+p.mic+(p===me)+p.role+'|'+(p.color|0);if(key===r.tagKey)return;r.tagKey=key;
+ const c=document.createElement('canvas');c.width=512;c.height=104;const g=c.getContext('2d');g.font='800 40px Nunito,sans-serif';const w=Math.min(500,g.measureText(label).width+44+34+(p.voice?34:0));
  g.fillStyle=p.role==='teacher'?'rgba(242,177,52,.96)':p===me?'rgba(36,70,58,.94)':'rgba(20,25,30,.78)';g.beginPath();g.roundRect((512-w)/2,14,w,70,35);g.fill();
- g.fillStyle=p.role==='teacher'?'#1d2a2f':'#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(label,256-(p.voice?17:0),50);
+ g.fillStyle=COLORS[p.color]||COLORS[0];g.beginPath();g.arc((512-w)/2+30,49,12,0,7);g.fill();g.lineWidth=3;g.strokeStyle='rgba(255,255,255,.85)';g.stroke();
+ g.fillStyle=p.role==='teacher'?'#1d2a2f':'#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(label,256+17-(p.voice?17:0),50);
  if(p.voice){g.fillStyle=p.mic?'#4cd38a':'#ff6b6b';g.beginPath();g.arc((512+w)/2-30,49,12,0,7);g.fill();}setSpriteCanvas(r.tag,c);}
 function animAvatar(p,r,dt,t){
  const base=zoneAt(p.rx,p.ry)==='stage'?.2:0;r.y+=(base-r.y)*Math.min(1,dt*12);r.root.position.set(p.rx,r.y,p.ry);
