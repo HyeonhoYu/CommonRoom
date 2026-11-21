@@ -189,6 +189,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
   </div>
   <button class="ghost" id="demoBtn">Try it alone with practice classmates</button>
   <p id="err" role="alert"></p>
+  <p class="hint" style="text-align:center"><a id="altLink" href="3d/">Try the 3D version (beta)</a>. 2D and 3D users can be in the same room.</p>
  </div>
 </section>
 
@@ -512,6 +513,7 @@ $('#joinBtn').onclick=()=>{err();if(!readLook())return;const code=$('#code').val
 $('#hostBtn').onclick=()=>{err();if(!readLook())return;if(typeof Peer==='undefined'){err('Could not load the connection library. Check your internet connection.');return;}busy(true);loadMap(look.map);startHost(genCode());};
 $('#reopenBtn').onclick=()=>{err();if(!readLook())return;const c=savedHost();if(!c)return;if(typeof Peer==='undefined'){err('Could not load the connection library. Check your internet connection.');return;}busy(true);loadMap(savedMap()||look.map);startHost(c,true);};
 refreshReopen();
+{const upd=()=>{const c=$('#code').value.trim().toUpperCase();$('#altLink').href='3d/'+(c.length===6?'?room='+c:'');};$('#code').addEventListener('input',upd);upd();}
 $('#demoBtn').onclick=()=>{err();if(!$('#nm').value.trim())$('#nm').value='You';if(!readLook())return;startDemo();};
 
 /* ---------- host ---------- */
