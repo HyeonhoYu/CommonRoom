@@ -43,3 +43,7 @@ When `characters` is empty, the 3D page uses the built-in characters only.
 ## Characters made outside Mixamo
 
 - `char-alex.glb` (Alex) was built with MakeHuman/MPFB and its CC0 system assets, then given a Mixamo-compatible skeleton so the shared `anim-*.fbx` files above play on it like on the Mixamo characters.
+
+## Build-your-own avatars (`av/`)
+
+`av/m/` and `av/f/` hold the parts students pick from on the start screen: `body.glb` plus one file per hair style, outfit, shoes and hat. All parts share the body's Mixamo-compatible skeleton, so the shared `anim-*.fbx` files play on them. A student's choice is sent as the character id `av-<body>-<hair>-<outfit>-<shoes>-<hat>` (indices into `AVO` in `3d/index.html`); skin tone and hair color reuse the existing Skin and Hair color swatches as tints. Body pieces carry a `hideBy` list so skin under the chosen clothes is hidden. Made with MakeHuman/MPFB and its CC0 system assets.
