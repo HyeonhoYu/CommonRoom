@@ -769,7 +769,7 @@ function updateBoard(){if(!boardMat)return;const img=slideCur>=0?slideCache[slid
 var MODELS=null;
 const manifestReady=fetch('models/manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.characters)&&j.characters.length)MODELS=j;}).catch(()=>{});
 let LD=null;const assetCache={},modelCache={},clipCache={};
-function loaders(){return LD||(LD=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/FBXLoader.js'),import('three/addons/utils/SkeletonUtils.js'),import('three/addons/libs/meshopt_decoder.module.js')]).then(([g,f,s,mo])=>{const gl=new g.GLTFLoader();gl.setMeshoptDecoder(mo.MeshoptDecoder);return {gltf:gl,fbx:new f.FBXLoader(),SU:s};}));}
+function loaders(){return LD||(LD=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/FBXLoader.js'),import('three/addons/utils/SkeletonUtils.js'),import('three/addons/libs/meshopt_decoder.module.js'),import('three/addons/utils/BufferGeometryUtils.js')]).then(([g,f,s,mo,bu])=>{const gl=new g.GLTFLoader();gl.setMeshoptDecoder(mo.MeshoptDecoder);return {gltf:gl,fbx:new f.FBXLoader(),SU:s,BGU:bu};}));}
 const fileOf=spec=>String(spec).split('#')[0];
 function getAsset(spec){const f=fileOf(spec);return assetCache[f]||(assetCache[f]=loaders().then(L=>new Promise((res,rej)=>{const url='models/'+f;
  if(/\.fbx$/i.test(f))L.fbx.load(url,o=>res({scene:o,animations:o.animations||[],fbx:true}),undefined,rej);else L.gltf.load(url,g=>res({scene:g.scene,animations:g.animations||[],fbx:false}),undefined,rej);})));}
@@ -808,6 +808,20 @@ function standPose(m,obj,walk){if(m.standF==null){const mx=new THREE.AnimationMi
  return new THREE.AnimationClip('idle',1,tracks);}
 /* realistic "build your own": body + chosen parts share one Mixamo-style skeleton */
 const AVSKIN={m:[.9035,.7667,.689],f:[.8969,.7635,.6984]},AVHAIR={m:1/.4925,f:1/.4508},AVH={m:1.53,f:1.47},avCache={};
+/* the body comes in many pieces so clothes can hide what they cover; draw the visible ones as one mesh */
+function avFloat(a){const n=a.count,k=a.itemSize,out=new Float32Array(n*k),g=['getX','getY','getZ','getW'];for(let i=0;i<n;i++)for(let j=0;j<k;j++)out[i*k+j]=a[g[j]](i);return new THREE.BufferAttribute(out,k);}
+function mergeAvBody(s,L){const pieces=[];s.traverse(o=>{if(o.isSkinnedMesh&&o.userData&&typeof o.userData.hideBy==='string')pieces.push(o);});
+ const vis=pieces.filter(o=>o.visible);if(vis.length<2||!L.BGU)return;
+ s.updateMatrixWorld(true);const geos=[];
+ for(const o of vis){const src=o.geometry,g=new THREE.BufferGeometry(),sk=o.skeleton;
+  /* compressed pieces keep their own scale in their bone inverses; bring them into the shared bind space */
+  const m=new THREE.Matrix4().multiplyMatrices(sk.bones[0].matrixWorld,sk.boneInverses[0]).premultiply(new THREE.Matrix4().copy(o.bindMatrixInverse)).multiply(o.bindMatrix),nm=new THREE.Matrix3().getNormalMatrix(m);
+  g.setAttribute('position',avFloat(src.attributes.position).applyMatrix4(m));g.setAttribute('normal',avFloat(src.attributes.normal).applyNormalMatrix(nm));
+  g.setAttribute('uv',avFloat(src.attributes.uv));const si=src.attributes.skinIndex,sa=new Uint16Array(si.count*4);for(let i=0;i<si.count;i++){sa[i*4]=si.getX(i);sa[i*4+1]=si.getY(i);sa[i*4+2]=si.getZ(i);sa[i*4+3]=si.getW(i);}g.setAttribute('skinIndex',new THREE.BufferAttribute(sa,4));
+  g.setAttribute('skinWeight',avFloat(src.attributes.skinWeight));g.setIndex(src.index?[...src.index.array]:[...Array(src.attributes.position.count).keys()]);geos.push(g);}
+ const mg=L.BGU.mergeGeometries(geos,false);if(!mg)return;
+ const mesh=new THREE.SkinnedMesh(mg,vis[0].material);mesh.name='body';mesh.userData.merged=true;s.add(mesh);mesh.updateMatrixWorld(true);mesh.bind(new THREE.Skeleton(vis[0].skeleton.bones),new THREE.Matrix4());
+ for(const o of pieces)o.removeFromParent();}
 function getAvModel(p){const v=avOf(p.model),key=avStr(v)+'|'+(p.skin|0)+'|'+(p.hc|0);
  if(avCache[key])return avCache[key];
  const part=(k,i)=>getAsset('av/'+v.b+'/'+k+'-'+AVO[k][i][0]+'.glb');
@@ -815,12 +829,15 @@ function getAvModel(p){const v=avOf(p.model),key=avStr(v)+'|'+(p.skin|0)+'|'+(p.
   const s=L.SU.clone(body.scene),bones={};s.traverse(o=>{if(o.isBone)bones[o.name]=o;});
   const hide=new Set([AVO.outfit[v.o][0],AVO.shoes[v.s][0],AVO.hat[v.x][0]].filter(Boolean));
   s.traverse(o=>{const hb=o.userData&&o.userData.hideBy;if(typeof hb==='string'&&hb.split(',').some(x=>hide.has(x)))o.visible=false;});
+  const fullBox=new THREE.Box3();s.updateMatrixWorld(true);s.traverse(o=>{if(o.isSkinnedMesh&&o.material.name==='skin'){o.computeBoundingBox();fullBox.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
+  mergeAvBody(s,L);
   for(const pt of parts){if(!pt)continue;const ps=L.SU.clone(pt.scene),ms=[];ps.traverse(o=>{if(o.isSkinnedMesh)ms.push(o);});
    for(const m of ms){const nb=m.skeleton.bones.map(b=>bones[b.name]);if(nb.some(b=>!b))continue;m.bind(new THREE.Skeleton(nb,m.skeleton.boneInverses),m.bindMatrix);m.removeFromParent();s.add(m);}}
   const sm=AVSKIN[v.b],sk=new THREE.Color(SKINS[p.skin]||SKINS[0]),hc=new THREE.Color(HAIRC[p.hc]||HAIRC[0]);
   const tint={skin:new THREE.Color(sk.r/sm[0],sk.g/sm[1],sk.b/sm[2]),hair:hc.clone().multiplyScalar(AVHAIR[v.b])};tint.brows=tint.hair.clone().multiplyScalar(.7);
   s.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();const mt=o.material;if(mt.map)mt.map.colorSpace=THREE.SRGBColorSpace;if(tint[mt.name])mt.color.copy(tint[mt.name]);});
   s.updateMatrixWorld(true);const box=new THREE.Box3();s.traverse(o=>{if(o.isSkinnedMesh&&(o.material.name==='skin'||o.material.name==='shoes')){o.computeBoundingBox();box.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
+  if(fullBox){box.union(fullBox);}
   const lo=box.min.y,h=(box.max.y-lo)||1;
   return {tpl:s,fbx:false,scale:AVH[v.b]/h,minY:lo,rot:0,own:[]};}).catch(e=>{console.warn('Avatar failed to load:',p.model,e);delete avCache[key];return null;});}
 /* stand designed avatars on the floor as they actually stand in the idle animation */
