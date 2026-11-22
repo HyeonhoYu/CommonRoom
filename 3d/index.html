@@ -43,12 +43,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
  .lay{grid-template-columns:380px minmax(0,1fr);column-gap:40px;grid-template-areas:none;align-items:start}
  .lay .left{display:block;position:sticky;top:0}
  .lay .right{display:block}
- .lay #prevSlot{width:380px;min-height:380px!important}
- .lay #prev,.lay #prev3:not(.float){width:380px!important;height:380px!important;border-radius:22px!important}
- .lay .a-join{margin-top:14px}
+ .lay{--pv:clamp(220px,calc(100vh - 360px),380px)}
+ .lay #prevSlot{width:var(--pv);min-width:0!important;min-height:var(--pv)!important;margin:0 auto}
+ .lay #prev,.lay #prev3:not(.float){width:var(--pv)!important;height:var(--pv)!important;border-radius:22px!important}
+ .lay .left{padding-top:4px}
+ .lay .a-join{margin-top:10px}
+ .lay .a-join>p.hint:last-child{display:none}
  .mode{max-width:520px}
 }
-@media(min-width:1000px) and (max-height:760px){.lay .left{position:static}}
 #prev{width:120px;height:120px;border-radius:18px;background:#efe6d3}
 label{font-weight:800;font-size:13px;color:var(--mut);display:block;margin:10px 0 4px}
 input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;background:#fff}
