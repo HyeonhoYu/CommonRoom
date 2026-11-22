@@ -85,6 +85,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
 #banner small{display:block;font-weight:700;opacity:.75}
 #banner button{position:absolute;right:6px;top:6px;background:none;min-height:32px;padding:0 10px}
 #toast{position:absolute;bottom:76px;left:50%;transform:translateX(-50%);background:rgba(20,30,28,.92);color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;font-size:14px;width:max-content;max-width:90%;text-align:center;transition:opacity .3s}
+#helpX{float:right;margin:-4px -6px 0 8px;border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:var(--mut)}
 #help{position:absolute;left:12px;bottom:72px;max-width:300px;background:rgba(255,255,255,.9);border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--ink)}
 .side{background:var(--paper);display:grid;grid-template-rows:auto minmax(0,1fr);border-left:1px solid #00000022;min-height:0}
 .side .tabs{margin:10px}
@@ -256,7 +257,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
   <div id="stage">
    <canvas id="cv"></canvas>
    <div id="banner" class="hidden"><small>Announcement from your teacher</small><span id="bannerText"></span><button id="bannerX" aria-label="Close">Close</button></div>
-   <div id="help">Move with WASD or the arrow keys. Drag to look around, scroll or pinch to zoom, Q and E to turn. Click the floor to walk there. Press 1 to 6 to react.</div>
+   <div id="help"><button type="button" id="helpX" aria-label="Close tip">×</button>Move with WASD or the arrow keys. Drag to look around, scroll or pinch to zoom, Q and E to turn. Click the floor to walk there. Press 1 to 6 to react.</div>
    <div id="emotes" role="toolbar" aria-label="Reactions"></div>
    <div id="toast" style="opacity:0"></div>
    <div id="slides" class="hidden" role="region" aria-label="Shared slides">
@@ -1054,10 +1055,14 @@ function loop(t){if(!me)return;const dt=Math.min(.05,(t-last)/1000);last=t;
  renderer.render(scene,camera);requestAnimationFrame(loop);}
 
 /* ---------- input ---------- */
-addEventListener('keydown',e=>{if(!me||e.target.closest('input,textarea'))return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d','q','e'].includes(k)){keys.add(k);e.preventDefault();}
+/* read the physical key, so movement works with any keyboard language (e.g. Korean input sends 'ㅈ' for W) */
+const KEYCODE={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyQ:'q',KeyE:'e',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
+const keyOf=e=>KEYCODE[e.code]||String(e.key||'').toLowerCase();
+const hideHelp=()=>$('#help').classList.add('hidden');$('#helpX').onclick=hideHelp;
+addEventListener('keydown',e=>{if(!me||(e.target.closest&&e.target.closest('input,textarea')))return;const k=keyOf(e);if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d','q','e'].includes(k)){keys.add(k);e.preventDefault();hideHelp();}
  if(k==='enter'){$('#chatIn').focus();e.preventDefault();}
- if(/^[1-6]$/.test(e.key))sendEmote(+e.key-1);});
-addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+ const dg=/^Digit([1-6])$/.exec(e.code||'')||/^([1-6])$/.exec(e.key||'');if(dg)sendEmote(+dg[1]-1);});
+addEventListener('keyup',e=>{keys.delete(keyOf(e));keys.delete(String(e.key||'').toLowerCase());});
 addEventListener('blur',()=>keys.clear());
 let pdn=null;const pts=new Map();
 cv.addEventListener('pointerdown',e=>{if(!me)return;pts.set(e.pointerId,[e.clientX,e.clientY]);pdn={x:e.clientX,y:e.clientY,drag:false,d0:0};try{cv.setPointerCapture(e.pointerId);}catch(x){}

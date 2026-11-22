@@ -683,10 +683,13 @@ function draw(t){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#1a2a24';ctx.fillR
   if(p.bubble&&nw<p.bubbleT)drawBubble(ctx,p.bubble,x,y-(p.acc===2||p.acc===4||p.acc>=6?55:46));}}
 
 /* ---------- input ---------- */
-addEventListener('keydown',e=>{if(!me||e.target.closest('input,textarea'))return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();}
+/* read the physical key, so movement works with any keyboard language (e.g. Korean input sends 'ㅈ' for W) */
+const KEYCODE={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
+const keyOf=e=>KEYCODE[e.code]||String(e.key||'').toLowerCase();
+addEventListener('keydown',e=>{if(!me||(e.target.closest&&e.target.closest('input,textarea')))return;const k=keyOf(e);if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();}
  if(k==='enter'){$('#chatIn').focus();e.preventDefault();}
- if(/^[1-6]$/.test(e.key))sendEmote(+e.key-1);});
-addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+ const dg=/^Digit([1-6])$/.exec(e.code||'')||/^([1-6])$/.exec(e.key||'');if(dg)sendEmote(+dg[1]-1);});
+addEventListener('keyup',e=>{keys.delete(keyOf(e));keys.delete(String(e.key||'').toLowerCase());});
 addEventListener('blur',()=>keys.clear());
 cv.addEventListener('pointerdown',e=>{if(!me)return;const r=cv.getBoundingClientRect();const wx=(e.clientX-r.left)/zoom+camX,wy=(e.clientY-r.top)/zoom+camY;
  const gx=Math.floor(wx/TS),gy=Math.floor(wy/TS);const p=bfs(Math.floor(me.x),Math.floor(me.y),gx,gy);if(p)me.path=p;$('#side').classList.remove('open');});
