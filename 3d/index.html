@@ -24,6 +24,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 /* landing */
 #landing{position:fixed;inset:0;display:grid;place-items:center;padding:20px;overflow:auto;
  background:radial-gradient(circle at 20% 15%,#356b58 0,transparent 45%),radial-gradient(circle at 85% 90%,#1b382e 0,transparent 50%),var(--chalk)}
+.mode{display:flex;gap:4px;background:#ebe3d2;border-radius:14px;padding:4px;margin:2px 0 20px}
+.mode a{flex:1;text-align:center;padding:9px 10px;border-radius:10px;font-weight:800;font-size:16px;text-decoration:none;color:var(--chalk)}
+.mode a:hover:not([aria-current]){background:rgba(255,255,255,.6)}
+.mode a[aria-current]{background:var(--chalk);color:#fff;cursor:default}
+.mode small{display:block;font-weight:600;font-size:12px;opacity:.75;margin-top:1px}
 .card{width:min(560px,100%);background:var(--paper);border-radius:22px;padding:clamp(20px,4vw,34px);box-shadow:0 30px 60px rgba(0,0,0,.35)}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 .brand h1{font-size:36px;line-height:1.05;margin:0;font-weight:900;letter-spacing:-.5px}
@@ -164,6 +169,7 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
    <h1>CommonRoom <span style="font-size:15px;background:var(--chalk);color:#fff;border-radius:8px;padding:3px 8px;vertical-align:middle">3D beta</span></h1>
   </div>
   <p class="sub">A shared classroom on the web. Walk around as your character, chat, and talk with whoever is near you.</p>
+  <nav class="mode" aria-label="Choose 2D or 3D"><a id="modeOther" href="../">2D<small>Lite, runs on any computer</small></a><a aria-current="page">3D<small>Realistic characters (beta)</small></a></nav>
   <div class="row">
    <div id="prevSlot" style="position:relative;min-width:120px;min-height:120px"><canvas id="prev" width="240" height="240" aria-label="Your character"></canvas><canvas id="prev3" class="hidden" style="width:120px;height:120px;border-radius:18px;background:#efe6d3;display:block" aria-label="Your character in 3D"></canvas></div>
    <div>
@@ -561,7 +567,7 @@ $('#joinBtn').onclick=()=>{err();if(!readLook())return;const code=$('#code').val
 $('#hostBtn').onclick=()=>{err();if(!readLook())return;if(typeof Peer==='undefined'){err('Could not load the connection library. Check your internet connection.');return;}busy(true);threeReady.then(()=>{if(!THREE){busy(false);err('The 3D engine could not load. Use the 2D lite version below.');return;}loadMap(look.map);startHost(genCode());});};
 $('#reopenBtn').onclick=()=>{err();if(!readLook())return;const c=savedHost();if(!c)return;if(typeof Peer==='undefined'){err('Could not load the connection library. Check your internet connection.');return;}busy(true);threeReady.then(()=>{if(!THREE){busy(false);err('The 3D engine could not load. Use the 2D lite version below.');return;}loadMap(savedMap()||look.map);startHost(c,true);});};
 refreshReopen();
-{const upd=()=>{const c=$('#code').value.trim().toUpperCase();$('#altLink').href='../'+(c.length===6?'?room='+c:'');};$('#code').addEventListener('input',upd);upd();}
+{const upd=()=>{const c=$('#code').value.trim().toUpperCase();$('#altLink').href='../'+(c.length===6?'?room='+c:'');$('#modeOther').href=$('#altLink').href;};$('#code').addEventListener('input',upd);upd();}
 $('#demoBtn').onclick=()=>{err();if(!$('#nm').value.trim())$('#nm').value='You';if(!readLook())return;threeReady.then(()=>{if(!THREE){err('The 3D engine could not load. Use the 2D lite version below.');return;}startDemo();});};
 
 /* ---------- host ---------- */
