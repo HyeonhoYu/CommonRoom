@@ -49,3 +49,5 @@ When `characters` is empty, the 3D page uses the built-in characters only.
 `av/m/` and `av/f/` hold the parts students pick from on the start screen: `body.glb` plus one file per hair style, outfit, shoes and hat. All parts share the body's Mixamo-compatible skeleton, so the shared `anim-*.fbx` files play on them. A student's choice is sent as the character id `av-<body>-<hair>-<outfit>-<shoes>-<hat>` (indices into `AVO` in `3d/index.html`); skin tone and hair color reuse the existing Skin and Hair color swatches as tints. Body pieces carry a `hideBy` list so skin under the chosen clothes is hidden. Made with MakeHuman/MPFB and its CC0 system assets.
 
 Female designed avatars use `anim-walk-f.fbx` for walking (set in `AVANIM` in `3d/index.html`); everything else uses the shared animations. Eyebrows (`brows-*.glb`) and eye colors (`eyes-*.glb`) are separate parts too.
+
+Outfits have two materials, `top` and `bottom`, so students can pick a color for each (Top color / Bottom color in the builder; index 0 keeps the original texture). A chosen color is applied in the browser to a gray copy of that garment's texture.

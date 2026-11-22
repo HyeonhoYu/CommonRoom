@@ -178,6 +178,8 @@ input[type=text],textarea{width:100%;border:2px solid var(--line);border-radius:
   <label>Eyebrows</label><div class="sw acc" id="avBrows"></div>
   <label>Eye color</label><div class="sw" id="avEyes"></div>
   <label>Outfit</label><div class="sw acc" id="avOutfit"></div>
+  <label>Top color</label><div class="sw" id="avTopC"></div>
+  <label>Bottom color</label><div class="sw" id="avBotC"></div>
   <label>Shoes</label><div class="sw acc" id="avShoes"></div>
   <label>Extra</label><div class="sw acc" id="avHat"></div>
   </div>
@@ -326,10 +328,11 @@ const AVO={body:[['m','Male'],['f','Female']],
  brows:[['eyebrow002','Thick'],['eyebrow001','Natural'],['eyebrow004','Straight'],['eyebrow006','Arched'],['eyebrow008','Bushy'],['eyebrow010','Thin']],
  eyes:[['brown','#6b4a32'],['darkbrown','#3a281c'],['hazel','#9a7238'],['green','#4f8a4f'],['bluegreen','#5fa3a0'],['blue','#3f6f9e'],['lightblue','#7fa8d6'],['grey','#9aa3a8']]};
 AVO.outfit.push(['male_casualsuit02','Logo tee']);
-const isAv=s=>/^av-[mf](-\d{1,2}){4,6}$/.test(s||'');
+AVO.ocol=[['','Original'],['white','#f2f2ee'],['gray','#8a8f96'],['black','#262626'],['navy','#1f3a68'],['blue','#3d7bd9'],['teal','#2a9d8f'],['green','#3f7d3a'],['khaki','#c8b48a'],['brown','#7a4a2b'],['red','#b8323f'],['pink','#e07a9a'],['purple','#6b4fb3'],['yellow','#e8b33a']];
+const isAv=s=>/^av-[mf](-\d{1,2}){4,8}$/.test(s||'');
 function avOf(s){const a=String(s||'').split('-'),b=a[1]==='f'?'f':'m',n=(i,k,d=0)=>{if(a[i]===undefined)return d;const v=+a[i];return v>=0&&v<AVO[k].length?v|0:d;};
- return {b,h:n(2,'hair'),o:n(3,'outfit'),s:n(4,'shoes'),x:n(5,'hat'),e:n(6,'brows',b==='f'?3:0),y:n(7,'eyes')};}
-const avStr=v=>`av-${v.b}-${v.h}-${v.o}-${v.s}-${v.x}-${v.e}-${v.y}`;
+ return {b,h:n(2,'hair'),o:n(3,'outfit'),s:n(4,'shoes'),x:n(5,'hat'),e:n(6,'brows',b==='f'?3:0),y:n(7,'eyes'),tc:n(8,'ocol'),bc:n(9,'ocol')};}
+const avStr=v=>`av-${v.b}-${v.h}-${v.o}-${v.s}-${v.x}-${v.e}-${v.y}-${v.tc|0}-${v.bc|0}`;
 const EMO=['Wave','Clap','Thumbs up','Heart','Question','Dance'];
 const PRIV=new Set(['A','B','C','D']);
 const hsh=(x,y)=>(((x*73856093)^(y*19349663))>>>0)%997;
@@ -530,13 +533,13 @@ function avTo2d(v){const hk=AVO.hair[v.h][0],ok=AVO.outfit[v.o][0];
  look.outfit=/elegantsuit01$/.test(ok)&&ok.startsWith('female')?2:/worksuit/.test(ok)?4:/suit05|elegant/.test(ok)?1:/suit01$|suit03$/.test(ok)?3:0;
  look.acc=v.x?1:0;}
 function avUi(){const v=avOf(look.av),on=isAv(look.model);
- [['avBody',v.b==='f'?1:0],['avHair',v.h],['avOutfit',v.o],['avShoes',v.s],['avHat',v.x],['avBrows',v.e],['avEyes',v.y]].forEach(([id,i])=>{for(const [k,x] of [...$('#'+id).children].entries())x.setAttribute('aria-pressed',on&&k===i);});
+ [['avBody',v.b==='f'?1:0],['avHair',v.h],['avOutfit',v.o],['avShoes',v.s],['avHat',v.x],['avBrows',v.e],['avEyes',v.y],['avTopC',v.tc],['avBotC',v.bc]].forEach(([id,i])=>{for(const [k,x] of [...$('#'+id).children].entries())x.setAttribute('aria-pressed',on&&k===i);});
  const mp=$('#swModel');for(const x of mp.children)x.setAttribute('aria-pressed',x.dataset.id?x.dataset.id===look.model:on);
  $('#buildOpts').classList.toggle('dim',!on);}
-function avSw(id,key,list,color){const el=$('#'+id);el.innerHTML=list.map(([k,n],i)=>color?`<button type="button" data-i="${i}" aria-label="${k} eyes" style="background:${n}"></button>`:`<button type="button" data-i="${i}">${n}</button>`).join('');
+function avSw(id,key,list,color,what='eyes'){const el=$('#'+id);el.innerHTML=list.map(([k,n],i)=>color?(k?`<button type="button" data-i="${i}" aria-label="${k} ${what}" style="background:${n}"></button>`:`<button type="button" data-i="${i}" aria-label="original ${what} color" title="Original color" style="background:conic-gradient(#b8323f 0 25%,#3d7bd9 0 50%,#e8b33a 0 75%,#2a9d8f 0)"></button>`):`<button type="button" data-i="${i}">${n}</button>`).join('');
  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=avOf(look.av),i=+b.dataset.i;if(key==='b'){if(v.b!==AVO.body[i][0])v.e=i?3:0;v.b=AVO.body[i][0];}else v[key]=i;
   look.av=avStr(v);look.model=look.av;avTo2d(v);avUi();drawPrev();};}
-avSw('avBody','b',AVO.body);avSw('avHair','h',AVO.hair);avSw('avOutfit','o',AVO.outfit);avSw('avShoes','s',AVO.shoes);avSw('avHat','x',AVO.hat);avSw('avBrows','e',AVO.brows);avSw('avEyes','y',AVO.eyes,true);avUi();
+avSw('avBody','b',AVO.body);avSw('avHair','h',AVO.hair);avSw('avOutfit','o',AVO.outfit);avSw('avShoes','s',AVO.shoes);avSw('avHat','x',AVO.hat);avSw('avBrows','e',AVO.brows);avSw('avEyes','y',AVO.eyes,true);avSw('avTopC','tc',AVO.ocol,true,'top');avSw('avBotC','bc',AVO.ocol,true,'bottom');avUi();
 function mapSeg(el,cb){el.innerHTML=Object.keys(MAPS).map(k=>`<button type="button" data-v="${k}" aria-pressed="false">${MAPS[k].name}</button>`).join('');
  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;for(const x of el.children)x.setAttribute('aria-pressed',x===b);cb(b.dataset.v);};}
 function markSeg(el,v){for(const x of el.children)x.setAttribute('aria-pressed',x.dataset.v===v);}
@@ -822,6 +825,17 @@ function mergeAvBody(s,L){const pieces=[];s.traverse(o=>{if(o.isSkinnedMesh&&o.u
  const mg=L.BGU.mergeGeometries(geos,false);if(!mg)return;
  const mesh=new THREE.SkinnedMesh(mg,vis[0].material);mesh.name='body';mesh.userData.merged=true;s.add(mesh);mesh.updateMatrixWorld(true);mesh.bind(new THREE.Skeleton(vis[0].skeleton.bones),new THREE.Matrix4());
  for(const o of pieces)o.removeFromParent();}
+/* recolor a garment: a gray copy of its texture (pattern and folds kept), brightened so the chosen color reads true */
+const avNeutralCache={};
+function avNeutral(mesh,map){if(!map||!map.image||typeof document==='undefined')return null;const key=map.uuid+'|'+mesh.geometry.uuid;if(avNeutralCache[key])return avNeutralCache[key];
+ const img=map.image,w=img.width,h=img.height;if(!w||!h)return null;
+ try{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);const d=g.getImageData(0,0,w,h),px=d.data;
+  const uv=mesh.geometry.attributes.uv;let sum=0,n=0;
+  for(let i=0;i<uv.count;i++){const u=uv.getX(i)%1,t=uv.getY(i)%1,x=Math.min(w-1,Math.max(0,u*w|0)),y=Math.min(h-1,Math.max(0,t*h|0)),j=(y*w+x)*4;sum+=px[j]*.3+px[j+1]*.59+px[j+2]*.11;n++;}
+  const k=191/Math.max(n?sum/n:128,8);
+  for(let j=0;j<px.length;j+=4){const l=Math.min(255,(px[j]*.3+px[j+1]*.59+px[j+2]*.11)*k);px[j]=px[j+1]=px[j+2]=l;}
+  g.putImageData(d,0,0);const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.flipY=map.flipY;t.wrapS=map.wrapS;t.wrapT=map.wrapT;t.anisotropy=map.anisotropy;
+  return avNeutralCache[key]=t;}catch(e){console.warn('Could not recolor',e);return null;}}
 function getAvModel(p){const v=avOf(p.model),key=avStr(v)+'|'+(p.skin|0)+'|'+(p.hc|0);
  if(avCache[key])return avCache[key];
  const part=(k,i)=>getAsset('av/'+v.b+'/'+k+'-'+AVO[k][i][0]+'.glb');
@@ -835,7 +849,8 @@ function getAvModel(p){const v=avOf(p.model),key=avStr(v)+'|'+(p.skin|0)+'|'+(p.
    for(const m of ms){const nb=m.skeleton.bones.map(b=>bones[b.name]);if(nb.some(b=>!b))continue;m.bind(new THREE.Skeleton(nb,m.skeleton.boneInverses),m.bindMatrix);m.removeFromParent();s.add(m);}}
   const sm=AVSKIN[v.b],sk=new THREE.Color(SKINS[p.skin]||SKINS[0]),hc=new THREE.Color(HAIRC[p.hc]||HAIRC[0]);
   const tint={skin:new THREE.Color(sk.r/sm[0],sk.g/sm[1],sk.b/sm[2]),hair:hc.clone().multiplyScalar(AVHAIR[v.b])};tint.brows=tint.hair.clone().multiplyScalar(.7);
-  s.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();const mt=o.material;if(mt.map)mt.map.colorSpace=THREE.SRGBColorSpace;if(tint[mt.name])mt.color.copy(tint[mt.name]);});
+  s.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();const mt=o.material;if(mt.map)mt.map.colorSpace=THREE.SRGBColorSpace;if(tint[mt.name])mt.color.copy(tint[mt.name]);
+   const ci=mt.name==='top'?v.tc:mt.name==='bottom'?v.bc:0;if(ci){const nm=avNeutral(o,mt.map);mt.color.set(AVO.ocol[ci][1]).multiplyScalar(nm?1/.522:1);if(nm)mt.map=nm;mt.needsUpdate=true;}});
   s.updateMatrixWorld(true);const box=new THREE.Box3();s.traverse(o=>{if(o.isSkinnedMesh&&(o.material.name==='skin'||o.material.name==='shoes')){o.computeBoundingBox();box.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
   if(fullBox){box.union(fullBox);}
   const lo=box.min.y,h=(box.max.y-lo)||1;
