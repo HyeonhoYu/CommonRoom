@@ -623,7 +623,7 @@ function hostRecv(c,d){if(!d||typeof d!=='object'||!me||ended)return;const p=pla
   sysAll(players[c.peer].name+(d.resume?' reconnected.':' joined the room.'));return;}
  if(!p)return;p.seen=Date.now();
  if(d.t==='me'){const x=+d.x,y=+d.y;if(x>0&&y>0&&x<MW&&y<MH){p.x=x;p.y=y;}
-  p.dir=['up','down','left','right'].includes(d.dir)?d.dir:'down';p.moving=!!d.moving;p.hand=!!d.hand;p.voice=!!d.voice;p.mic=!!d.mic;p.speaking=!!d.speaking;}
+  p.dir=['up','down','left','right'].includes(d.dir)?d.dir:'down';p.moving=!!d.moving;p.hand=!!d.hand;p.voice=!!d.voice;p.mic=!!d.mic;p.speaking=!!d.speaking;p.sim=!!d.sim;}
  else if(d.t==='chat')sendChat(p,d.text,d.scope);
  else if(d.t==='emote'){const k=int(d.k,EMO.length);setEmote(p,k);broadcast({t:'emote',id:p.id,k});}
  else if(d.t==='needslide'&&d.deck===deck&&slides[d.i])c.send({t:'slideimg',deck,i:d.i,img:slides[d.i]});}
@@ -631,7 +631,7 @@ function sendChat(p,text,sc){text=String(text||'').trim().slice(0,300);if(!text)
  const m={t:'chat',id:p.id,name:p.name,role:p.role,text,scope:sc==='all'?'all':'zone',zone:zoneAt(p.x,p.y)};broadcast(m);deliverChat(m);}
 function sysAll(text){broadcast({t:'sys',text});sysLine(text);}
 function dropPlayer(id){if(!players[id]||id===me.id)return;const n=players[id].name;const c=conns[id];delete players[id];delete conns[id];closeCall(id);try{c&&c.close();}catch(e){}sysAll(n+' left the room.');}
-const pack=p=>[p.id,p.name,p.color,p.skin,p.acc,+p.x.toFixed(2),+p.y.toFixed(2),p.dir,+p.moving,+p.hand,+p.voice,+p.mic,+p.speaking,p.role,p.hair|0,p.hc|0,p.outfit|0,p.pc|0,p.model||''];
+const pack=p=>[p.id,p.name,p.color,p.skin,p.acc,+p.x.toFixed(2),+p.y.toFixed(2),p.dir,+p.moving,+p.hand,+p.voice,+p.mic,+p.speaking,p.role,p.hair|0,p.hc|0,p.outfit|0,p.pc|0,p.model||'',+!!p.sim];
 setInterval(()=>{if(!me||!isHost||offline)return;const now=Date.now();for(const p of Object.values(players))if(p!==me&&now-(p.seen||now)>15000)dropPlayer(p.id);},2000);
 setInterval(()=>{if(me&&isHost&&!offline)saveHost();},60000);
 
@@ -670,7 +670,7 @@ function clientRecv(d){if(!d||typeof d!=='object'||!me||ended)return;
  case 'denied':busy(false);ended=true;err('This room is locked. Ask your teacher to unlock it.');try{peer.destroy();}catch(e){}break;
  case 'state':{const seen=new Set();
   for(const a of d.p){const id=a[0];if(id===me.id)continue;seen.add(id);let p=others[id];if(!p){p=others[id]={rx:a[5],ry:a[6],seed:Math.random()*6};}
-   Object.assign(p,{id,name:a[1],color:a[2],skin:a[3],acc:a[4],x:a[5],y:a[6],dir:a[7],moving:!!a[8],hand:!!a[9],voice:!!a[10],mic:!!a[11],speaking:!!a[12],role:a[13],hair:a[14]|0,hc:a[15]|0,outfit:a[16]|0,pc:a[17]|0,model:cleanModel(a[18])});}
+   Object.assign(p,{id,name:a[1],color:a[2],skin:a[3],acc:a[4],x:a[5],y:a[6],dir:a[7],moving:!!a[8],hand:!!a[9],voice:!!a[10],mic:!!a[11],speaking:!!a[12],role:a[13],hair:a[14]|0,hc:a[15]|0,outfit:a[16]|0,pc:a[17]|0,model:cleanModel(a[18]),sim:!!a[19]});}
   for(const id in others)if(!seen.has(id)){delete others[id];closeCall(id);}break;}
  case 'chat':deliverChat(d);break;
  case 'sys':sysLine(d.text);break;
@@ -1011,6 +1011,7 @@ function animAvatar(p,r,dt,t){
  if(r.mixer){modelAnim(r,em===0?'wave':em===1?'clap':em===2?'thumbs':em===5?'dance':p.hand?'hand':mv?'walk':'idle',dt);if(r.acts.walk)r.acts.walk.timeScale=1.15;}
  r.ring.visible=!!p.speaking;if(p.speaking)r.ring.scale.setScalar(1+Math.sin(t*9)*.06);
  drawTag(r,p);r.handS.visible=!!p.hand;
+ if(p.sim&&window.CRSim){if(!r.simS){const c=document.createElement('canvas');c.width=420;c.height=92;const g=c.getContext('2d');g.scale(3.5,3.5);CRSim.drawBusy(g,60,21,1);r.simS=spriteFrom(c,1.6,.35);r.root.add(r.simS);}r.simS.visible=true;r.simS.position.y=p.acc===7?2.62:2.42;}else if(r.simS)r.simS.visible=false;
  if(em>=0){const key=em+'';if(key!==r.emoKey){r.emoKey=key;const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#fff';g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=3;g.beginPath();g.arc(64,64,58,0,7);g.fill();g.stroke();drawEmo(g,em,64,64,3.2);setSpriteCanvas(r.emoS,c);}
   const a=Math.min(1,ep*7),sc=a*(1+.18*Math.sin(a*Math.PI));r.emoS.visible=true;r.emoS.scale.set(.62*sc,.62*sc,1);r.emoS.position.set(0,(p.acc===7?2.65:2.45)+ep*.3,0);r.emoS.material.opacity=ep>.85?(1-ep)/.15:1;}
  else{r.emoS.visible=false;r.emoKey='';}
@@ -1045,7 +1046,7 @@ function loop(t){if(!me)return;const dt=Math.min(.05,(t-last)/1000);last=t;
  const z=zoneAt(me.x,me.y);if(z!==lastZone){const prevZ=lastZone;lastZone=z;$('#zone').textContent=ZN[z];
   if(prevZ){if(PRIV.has(z))toast(ZN[z]+': only people in this room can hear you and see room chat.');else if(z==='stage')toast('You are on the Stage. Everyone can hear you.');}
   $('#chatIn').placeholder=scope==='all'?'Message everyone':'Message people in '+ZN[z];}
- if(window.CRSim)CRSim.update(mapId,me);
+ if(window.CRSim){CRSim.update(mapId,me);me.sim=CRSim.isOpen();}
  const ts=t/1000;syncAvatars(dt,ts);updateBoard();
  if(me.path&&me.path.length){const [tx,ty]=me.path[me.path.length-1];marker.visible=true;marker.position.set(tx,.03+(zoneAt(tx,ty)==='stage'?.2:0),ty);marker.scale.setScalar(1+Math.sin(ts*6)*.12);}else marker.visible=false;
  const r=me._r,ty=(r?r.y:0)+1.15,cp=Math.cos(camPitch);
@@ -1087,7 +1088,7 @@ cv.addEventListener('wheel',e=>{if(!me)return;e.preventDefault();camDist=Math.ma
 /* ---------- network ticks ---------- */
 setInterval(()=>{if(!me||offline)return;
  if(isHost){broadcast({t:'state',p:Object.values(players).map(pack)});}
- else if(hostConn&&hostConn.open)hostConn.send({t:'me',x:+me.x.toFixed(2),y:+me.y.toFixed(2),dir:me.dir,moving:me.moving,hand:me.hand,voice:me.voice,mic:me.mic,speaking:me.speaking});},100);
+ else if(hostConn&&hostConn.open)hostConn.send({t:'me',x:+me.x.toFixed(2),y:+me.y.toFixed(2),dir:me.dir,moving:me.moving,hand:me.hand,voice:me.voice,mic:me.mic,speaking:me.speaking,sim:!!me.sim});},100);
 
 /* ---------- voice ---------- */
 let stream=null,actx=null,analyser=null;const calls={},nodes={};
@@ -1165,6 +1166,7 @@ function renderPeople(){if(!me)return;const list=everyone().slice().sort((a,b)=>
   const info=document.createElement('div');const n=document.createElement('div');n.style.fontWeight=900;n.textContent=p.name+(p===me?' (you)':'')+(p.role==='teacher'?' (Teacher)':'');const z=document.createElement('div');z.className='z';z.textContent=ZN[zoneAt(p.x,p.y)];info.append(n,z);
   const bd=document.createElement('div');bd.style.display='flex';bd.style.gap='4px';
   if(p.hand){const h=document.createElement('span');h.className='badge hand';h.textContent='Hand up';bd.append(h);}
+  if(p.sim){const h=document.createElement('span');h.className='badge';h.style.background='#7a5cff';h.style.color='#fff';h.textContent='In a simulation';bd.append(h);}
   const v=document.createElement('span');v.className='badge'+(p.voice?(p.mic?' live':' off'):'');v.textContent=p.voice?(p.mic?(p.speaking?'Talking':'Mic on'):'Muted'):'No voice';bd.append(v);
   r.append(dot,info,bd);box.append(r);}}
 setInterval(renderPeople,700);
