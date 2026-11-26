@@ -14,6 +14,11 @@ const NPCS={
  library:[
   {id:'patel',name:'Mrs. Patel',tag:'Parent',x:23,y:9,dir:'left',sc:'parent',greet:'Are you Arjun\'s teacher? I need to talk to you.',
    look:{color:4,skin:3,hair:1,hc:1,outfit:2,pc:0,acc:0,model:'av-f-6-5-3-0-3-1-12-0'}}],
+ meeting:[
+  {id:'okafor',name:'Mr. Okafor',tag:'Team lead',x:10,y:14,dir:'down',sc:'team',greet:'Grab a seat, our team meeting is about to start.',
+   look:{color:6,skin:4,hair:0,hc:1,outfit:3,pc:2,acc:0,model:'av-m-9-9-4-0-0-1-0-0'}},
+  {id:'chen',name:'Ms. Chen',tag:'Specialist',x:15,y:14,dir:'down',sc:'team',greet:'I brought the reading data for Sofia.',
+   look:{color:3,skin:0,hair:1,hc:1,outfit:3,pc:0,acc:3,model:'av-f-8-7-4-0-3-2-6-0'}}],
  quad:[
   {id:'maya',name:'Maya',tag:'Student',x:15,y:12,dir:'right',sc:'recess',greet:'It was OUR turn with the ball!',
    look:{color:5,skin:1,hair:3,hc:3,outfit:0,pc:1,acc:2,model:'av-f-7-6-0-0-3-2-11-0'}},
@@ -92,6 +97,38 @@ const SC={
     keys:['Lead with care before facts.','Avoid language that blames the child or the parent.','Offer concrete, doable steps.']},
    endEsc:{end:true,title:'Escalated',text:'The parent went to the principal frustrated. Deflecting responsibility is one of the fastest ways to lose a family\'s trust.',
     keys:['Own your role in the student\'s grade.','Repair quickly when a conversation goes wrong.','Keep the focus on what will help the student.']}}},
+
+ team:{title:'Team Meeting: A Struggling Reader',place:'Meeting Room',
+  intro:'You are invited to the 3rd grade team meeting. Mr. Okafor (team lead) and Ms. Chen (reading specialist) are reviewing students who are not making progress in reading intervention. You have been working with Sofia for six weeks.',
+  start:'t1',
+  nodes:{
+   t1:{who:'Mr. Okafor',text:'"Thanks for joining us. Let\'s start with Sofia. You have been working with her in small group. What have you noticed?"',
+    ch:[
+     {t:'"Her fluency went from 62 to 68 words per minute in six weeks, but the goal is 80. She does well with short words but struggles with multisyllable words."',to:'t2',pts:2,fb:'Specific data plus a clear pattern gives the team something to act on.'},
+     {t:'"She tries hard, but I think she is just a slow reader."',to:'t2x',pts:0,fb:'A general impression about the child, instead of evidence about her skills, makes it hard to plan the next step.'},
+     {t:'"I have not tracked it closely, but she seems a little better."',to:'t2x',pts:1,fb:'Honest, but without data the team cannot tell if the intervention is working.'}]},
+   t2x:{who:'Ms. Chen',text:'"Can you be more specific? Do you have any assessment data on her?"',
+    ch:[
+     {t:'"Not yet. I can do a quick fluency check this week and bring the results to the team."',to:'t2',pts:2,fb:'Admitting the gap and offering to collect data keeps the team moving forward.'},
+     {t:'"Her grades are low, so I think that shows it."',to:'endVague',pts:0,fb:'Grades mix many things together and do not show which reading skill needs support.'}]},
+   t2:{who:'Ms. Chen and Mr. Okafor',text:'Ms. Chen: "I would like to move her into a more intensive daily group." Mr. Okafor: "I am not sure. If we pull her out more, she misses science, and she loves science."',
+    ch:[
+     {t:'"Could we look at the schedule and find a time when she would not miss core content, like intervention block?"',to:'t3',pts:2,fb:'You take both concerns seriously and move the team toward a solution that works for Sofia.'},
+     {t:'"Whatever Mr. Okafor thinks is best."',to:'t3',pts:0,fb:'Deferring to the most senior person means your knowledge of Sofia never reaches the decision.'},
+     {t:'"Reading matters more than science right now, so I agree with Ms. Chen."',to:'t3',pts:1,fb:'You share a view, which is good, but dismissing a colleague\'s concern can make the team less willing to collaborate.'}]},
+   t3:{who:'Mr. Okafor',text:'"Okay. So what is our plan for Sofia?"',
+    ch:[
+     {t:'Summarize who will do what and by when, suggest letting Sofia\'s family know, and set a date to review her progress in four weeks.',to:'endGood',pts:2,fb:'Clear roles, family communication, and a review date turn a discussion into a plan.'},
+     {t:'"I will send everyone an email after the meeting."',to:'endOk',pts:1,fb:'Helpful, but the team leaves without agreeing on roles or a date to check progress.'},
+     {t:'"Let\'s see how it goes for now."',to:'endNoPlan',pts:0,fb:'Without a plan or a review date, Sofia can easily fall further behind.'}]},
+   endGood:{end:true,title:'Data-driven teammate',text:'You brought evidence, helped two colleagues find common ground, and left with a clear plan. That is what effective team meetings look like.',
+    keys:['Bring specific data about skills, not general impressions.','Look for solutions that respect everyone\'s concerns.','End with roles, family communication, and a review date.']},
+   endOk:{end:true,title:'Good start',text:'The meeting went fine, but the plan is still fuzzy. Try again and help the team leave with clear next steps.',
+    keys:['Share your own view respectfully, even as a new teacher.','Name who will do what and by when.','Set a date to look at progress again.']},
+   endVague:{end:true,title:'Opinions, not evidence',text:'The team could not make a decision because there was no clear data on Sofia\'s reading.',
+    keys:['Collect quick, specific data before team meetings.','Describe skills, not traits like "slow reader".','It is fine to say "I will find out" and follow up.']},
+   endNoPlan:{end:true,title:'No plan',text:'The meeting ended without a decision. Sofia will keep getting the same support that has not been working.',
+    keys:['Every meeting about a student should end with a plan.','Agree on a date to review progress.','Keep families in the loop.']}}},
 
  recess:{title:'Recess Conflict: Who Had the Ball?',place:'Campus Quad',
   intro:'You are on recess duty. Maya and Jayden, both 2nd graders, are shouting over a soccer ball. Other kids are starting to gather around.',
