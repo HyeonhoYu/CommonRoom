@@ -227,6 +227,24 @@ const css=`
 #sim textarea{width:100%;min-height:70px;border:2px solid #e3e0d8;border-radius:10px;padding:8px 10px;font-size:15px;margin:4px 0 12px;resize:vertical}
 #sim .pts{font-weight:900;font-size:12px;border-radius:99px;padding:1px 8px;margin-left:6px}
 #sim .pts.g{background:#d6f0df;color:#1d6b43}#sim .pts.m{background:#fbe8b8;color:#7a5600}#sim .pts.b{background:#f8d3d1;color:#8a2a24}
+#sim .sp.chat{display:flex;flex-direction:column;height:min(640px,100%);overflow:hidden;padding-bottom:14px}
+#sim .sp.chat .sh{flex:none}
+#sim .log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px 10px;scroll-behavior:smooth;cursor:default}
+#sim .rep{flex:none;border-top:2px solid #ebe3d2;padding-top:10px;max-height:46%;overflow-y:auto}
+#sim .rep .you{margin:0 0 6px}
+#sim .nar{align-self:center;max-width:92%;text-align:center;font-style:italic;color:#5f6f73;font-size:14px;background:#f1ece2;border-radius:12px;padding:8px 12px}
+#sim .msg{display:flex;gap:8px;align-items:flex-end;max-width:86%}
+#sim .msg .av{width:32px;height:32px;font-size:12px}
+#sim .msg .nm{font-size:12px;font-weight:900;color:#5f6f73;margin:0 0 2px 4px}
+#sim .msg .bub{background:#fff;border:2px solid #e3e0d8;border-radius:16px 16px 16px 4px;padding:9px 13px;font-size:15.5px;line-height:1.4}
+#sim .msg.me{align-self:flex-end}
+#sim .msg.me .bub{background:#24463a;border-color:#24463a;color:#fff;border-radius:16px 16px 4px 16px}
+#sim .log .fb{margin:0;font-size:14px}
+#sim .typing .bub{display:flex;gap:4px;padding:12px 14px}
+#sim .typing .bub i{width:7px;height:7px;border-radius:50%;background:#b9b2a3;animation:simdot 1s infinite}
+#sim .typing .bub i:nth-child(2){animation-delay:.15s}#sim .typing .bub i:nth-child(3){animation-delay:.3s}
+@keyframes simdot{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+#sim .vb{white-space:nowrap}
 @media (max-width:600px){#simPrompt{bottom:96px}#sim .sp{padding:16px}#sim .say{font-size:15px}}`;
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
 function mount(){if(ui)return;host=document.getElementById('stage')||document.body;
@@ -237,33 +255,84 @@ function mount(){if(ui)return;host=document.getElementById('stage')||document.bo
  ov.addEventListener('pointerdown',e=>e.stopPropagation());
  ui={pr,ov,sp};}
 const COL=['#e4572e','#f3a712','#2aa84a','#1d9bd1','#7a5cff','#ff5fa2','#2e4057','#8d6e63'];
-function speakerColor(who){if(!cur)return'#5f6f73';if(who==='Narrator')return'#5f6f73';for(const p of npcsFor(cur.map))if(who.indexOf(p.name)>=0)return COL[p.color]||'#7a5cff';return'#2e4057';}
 const initials=w=>w==='Narrator'?'...':w.split(/\s+and\s+|\s+/).filter(s=>/^[A-Z]/.test(s)).map(s=>s[0]).join('').slice(0,2);
 const grade=(p,max)=>max?(p/max>=.75?'g':p/max>=.4?'m':'b'):'g';
 
+/* ---------- turning node text into chat lines ---------- */
+const PEOPLE=['Ms. Rivera','Mrs. Patel','Mr. Okafor','Ms. Chen','Jordan','Jayden','Maya','Arjun','Sam','Leo'];
+const FEMALE=/Rivera|Patel|Chen|Maya/,CHILD=/Jordan|Jayden|Maya|Arjun|Sam|Leo/;
+/* split text into narration and speech bubbles: quoted speech goes to the person named just before it */
+function lines(n){if(n.say)return n.say;const out=[],t=n.text,re=/"([^"]*)"/g;let last=0,m;
+ const single=n.who!=='Narrator'&&n.who.indexOf(' and ')<0;
+ const nar=x=>{x=x.trim();if(x)out.push({who:'Narrator',text:x});};
+ while((m=re.exec(t))){let pre=t.slice(last,m.index),who=null;
+  const tag=/((?:Ms\.|Mr\.|Mrs\.)\s[A-Z][a-z]+|[A-Z][a-z]+)(?:\s[a-z]+)?\s*[:,]\s*$/.exec(pre);
+  if(tag&&PEOPLE.includes(tag[1])){who=tag[1];pre=pre.slice(0,tag.index);}
+  else if(single&&!pre.trim())who=n.who;
+  else{let bi=-1;for(const nm of PEOPLE){const i=pre.lastIndexOf(nm);if(i>bi){bi=i;who=nm;}}if(bi<0||!/[.!?]\s*$/.test(pre))who=null;}
+  if(!who){continue;}
+  nar(pre);out.push({who,text:m[1]});last=re.lastIndex;}
+ nar(t.slice(last));return out;}
+
+/* ---------- voice (browser speech) ---------- */
+let voiceOn=true;try{voiceOn=localStorage.getItem('cr_simvoice')!=='0';}catch(e){}
+const synth=window.speechSynthesis||null;
+function pickVoice(who){if(!synth)return null;const vs=synth.getVoices().filter(v=>/^en/i.test(v.lang));if(!vs.length)return null;
+ const fem=/female|samantha|zira|aria|jenny|victoria|karen|moira|tessa|fiona|susan|allison|ava|serena|libby|sonia|google us english/i,mal=/male|david|guy|daniel|alex|fred|mark|tom|aaron|arthur|ryan|george|google uk english male/i;
+ const pool=who==='Narrator'?vs:vs.filter(v=>(FEMALE.test(who)?fem:mal).test(v.name)&&!(FEMALE.test(who)?/\bmale\b/i:/female/i).test(v.name));
+ const list=pool.length?pool:vs;let h=0;for(const ch of who)h=(h*31+ch.charCodeAt(0))>>>0;return list[h%list.length];}
+function speak(who,text,done){if(!voiceOn||!synth){setTimeout(done,Math.min(2600,700+text.length*28));return;}
+ const u=new SpeechSynthesisUtterance(text);const v=pickVoice(who);if(v)u.voice=v;u.rate=who==='Narrator'?1.02:1;u.pitch=CHILD.test(who)?1.35:who==='Narrator'?1:FEMALE.test(who)?1.08:.92;
+ let fin=false;const end=()=>{if(fin)return;fin=true;done();};u.onend=end;u.onerror=end;setTimeout(end,1500+text.length*90);synth.speak(u);}
+function hush(){if(synth)synth.cancel();}
+if(synth&&synth.onvoiceschanged!==undefined)synth.onvoiceschanged=()=>{};
+
 function open(p){mount();const s=SC[p.sc];if(!s)return;
- cur={map:p._map||Object.keys(NPCS).find(k=>npcsFor(k).includes(p)),npc:p,s,node:null,log:[],pts:0,max:0};
+ cur={map:p._map||Object.keys(NPCS).find(k=>npcsFor(k).includes(p)),npc:p,s,node:null,log:[],pts:0,max:0,run:0};
  ui.ov.classList.remove('hidden');ui.pr.classList.add('hidden');if(onOpen)onOpen(p);renderIntro();}
-function close(){if(!ui)return;ui.ov.classList.add('hidden');cur=null;if(onClose)onClose();}
-function header(sub){const sp=ui.sp;sp.innerHTML='';const h=el('div','sh');const tt=el('div','tt');tt.append(el('small',null,cur.s.place+' simulation'+(sub?' | '+sub:'')),el('h2',null,cur.s.title));
- const x=el('button','x','Leave');x.type='button';x.onclick=close;h.append(tt,x);sp.appendChild(h);return sp;}
-function renderIntro(){const sp=header();const p=cur.npc;
+function close(){if(!ui)return;hush();ui.ov.classList.add('hidden');if(cur)cur.run++;cur=null;if(onClose)onClose();}
+function header(sub){const sp=ui.sp;sp.innerHTML='';sp.classList.remove('chat');const h=el('div','sh');const tt=el('div','tt');tt.append(el('small',null,cur.s.place+' simulation'+(sub?' | '+sub:'')),el('h2',null,cur.s.title));
+ const vb=el('button','x vb',voiceOn?'Voice on':'Voice off');vb.type='button';vb.title='Read the conversation aloud';
+ vb.onclick=()=>{voiceOn=!voiceOn;try{localStorage.setItem('cr_simvoice',voiceOn?'1':'0');}catch(e){}vb.textContent=voiceOn?'Voice on':'Voice off';if(!voiceOn)hush();};
+ const x=el('button','x','Leave');x.type='button';x.onclick=close;h.append(tt);if(synth)h.append(vb);h.append(x);sp.appendChild(h);return sp;}
+function renderIntro(){hush();cur.run++;const sp=header();const p=cur.npc;
  const w=el('div','who');const av=el('div','av',initials(p.name));av.style.background=COL[p.color]||'#7a5cff';w.append(av,el('span',null,p.name+' ('+p.tag+')'));
  sp.append(w,el('p','say',cur.s.intro));
- sp.appendChild(el('p','you','Choose what you would say or do. You will get feedback after each choice, and a summary at the end. Only you can see this.'));
- const b=el('button','go','Start');b.type='button';b.onclick=()=>show(cur.s.start);sp.appendChild(b);b.focus();}
-function show(id){const n=cur.s.nodes[id];if(!n)return close();cur.node=id;if(n.end)return renderEnd(n);
- const sp=header('Step '+(cur.log.length+1));
- const w=el('div','who');const av=el('div','av',initials(n.who));av.style.background=speakerColor(n.who);w.append(av,el('span',null,n.who));
- sp.append(w,el('p','say',n.text));
+ sp.appendChild(el('p','you','Talk with the characters by choosing what you would say or do. You will get feedback after each choice, and a summary at the end. Only you can see this.'));
+ const b=el('button','go','Start');b.type='button';b.onclick=startChat;sp.appendChild(b);b.focus();}
+/* chat view: a scrolling conversation plus a reply area */
+function startChat(){const sp=header();sp.classList.add('chat');const log=el('div','log');const rep=el('div','rep');sp.append(log,rep);cur.logEl=log;cur.repEl=rep;
+ log.addEventListener('click',()=>{if(cur&&cur.skip)cur.skip();});
+ addLine({who:'Narrator',text:cur.s.intro},true);show(cur.s.start);}
+function avFor(who){const av=el('div','av',initials(who));av.style.background=speakerColor(who);return av;}
+function speakerColor(who){if(who==='Narrator')return'#5f6f73';if(cur)for(const p of npcsFor(cur.map))if(who.indexOf(p.name)>=0)return COL[p.color]||'#7a5cff';let h=0;for(const ch of who)h=(h*7+ch.charCodeAt(0))%COL.length;return COL[h];}
+function scroll(){const l=cur&&cur.logEl;if(l)l.scrollTop=l.scrollHeight;}
+function addLine(L,quiet){const log=cur.logEl;let row;
+ if(L.who==='Narrator'){row=el('div','nar',L.text);}
+ else if(L.who==='You'){row=el('div','msg me');row.appendChild(el('div','bub',L.text));}
+ else{row=el('div','msg');const col=el('div');col.append(el('div','nm',L.who),el('div','bub',L.text));row.append(avFor(L.who),col);
+  if(cur)for(const p of npcsFor(cur.map))if(p.name===L.who){p.bubble=L.text;p.bubbleT=performance.now()+7000;}}
+ log.appendChild(row);scroll();return row;}
+function typing(who){const row=el('div','msg typing');const col=el('div');const b=el('div','bub');b.innerHTML='<i></i><i></i><i></i>';col.append(el('div','nm',who),b);row.append(avFor(who),col);cur.logEl.appendChild(row);scroll();return row;}
+/* play lines one at a time (with voice if on); click the conversation to skip ahead */
+function play(L,done){const run=cur.run;let i=0,skipping=false;
+ cur.skip=()=>{skipping=true;hush();};
+ const next=()=>{if(!cur||cur.run!==run)return;if(i>=L.length){cur.skip=null;return done();}const line=L[i++];
+  if(skipping){addLine(line);return next();}
+  const ty=line.who!=='Narrator'?typing(line.who):null;
+  setTimeout(()=>{if(!cur||cur.run!==run)return;if(ty)ty.remove();addLine(line);if(skipping)return next();speak(line.who,line.text,()=>{if(!cur||cur.run!==run)return;setTimeout(next,skipping?0:250);});},skipping||!ty?0:550);};
+ next();}
+function show(id){const n=cur.s.nodes[id];if(!n)return close();cur.node=id;if(n.end){hush();return setTimeout(()=>{if(cur)renderEnd(n);},400);}
+ cur.repEl.innerHTML='';cur.repEl.appendChild(el('p','you','Listening... (click the conversation to skip)'));
+ play(lines(n),()=>replies(n));}
+function replies(n){const rep=cur.repEl;rep.innerHTML='';rep.appendChild(el('p','you','Your turn. Press 1, 2 or 3, or tap a reply.'));
  const order=n.ch.slice();for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
  const chs=el('div','chs');order.forEach((c,i)=>{const b=el('button');b.type='button';b.append(el('b',null,String(i+1)),document.createTextNode(c.t));b.onclick=()=>choose(n,c);chs.appendChild(b);});
- sp.appendChild(chs);sp.appendChild(el('p','you','Tip: press 1, 2 or 3 to choose.'));const f=chs.querySelector('button');if(f)f.focus();}
-function choose(n,c){const best=Math.max(...n.ch.map(x=>x.pts));cur.pts+=c.pts;cur.max+=best;cur.log.push({q:n.text,a:c.t,pts:c.pts,best,fb:c.fb});
- const sp=header('Step '+cur.log.length);const g=grade(c.pts,best);
- sp.appendChild(el('p','you','You chose: '+c.t));
- const fb=el('div','fb '+g);fb.append(el('h3',null,g==='g'?'Strong move':g==='m'?'Partly effective':'Think again'),el('div',null,c.fb));sp.appendChild(fb);
- const b=el('button','go','Continue');b.type='button';b.onclick=()=>show(c.to);sp.appendChild(b);b.focus();}
+ rep.appendChild(chs);scroll();const f=chs.querySelector('button');if(f)f.focus({preventScroll:true});}
+function choose(n,c){hush();const best=Math.max(...n.ch.map(x=>x.pts));cur.pts+=c.pts;cur.max+=best;cur.log.push({q:n.text,a:c.t,pts:c.pts,best,fb:c.fb});
+ addLine({who:'You',text:c.t});const g=grade(c.pts,best);
+ const fb=el('div','fb '+g);fb.append(el('h3',null,g==='g'?'Strong move':g==='m'?'Partly effective':'Think again'),el('div',null,c.fb));cur.logEl.appendChild(fb);scroll();
+ const rep=cur.repEl;rep.innerHTML='';const b=el('button','go',cur.s.nodes[c.to]&&cur.s.nodes[c.to].end?'See results':'Continue');b.type='button';b.onclick=()=>show(c.to);rep.appendChild(b);b.focus({preventScroll:true});}
 function renderEnd(n){const sp=header('Results');const pct=cur.max?Math.round(cur.pts/cur.max*100):100;
  const fb=el('div','fb '+grade(cur.pts,cur.max));fb.append(el('h3',null,n.title),el('div',null,n.text));sp.appendChild(fb);
  const sc=el('div','score');const m=el('div','meter');const i=el('i');i.style.width=pct+'%';m.appendChild(i);sc.append(el('b',null,'Score '+cur.pts+' / '+cur.max),m);sp.appendChild(sc);
