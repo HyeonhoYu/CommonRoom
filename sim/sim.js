@@ -15,9 +15,9 @@ const NPCS={
   {id:'patel',name:'Mrs. Patel',tag:'Parent',x:23,y:9,dir:'left',sc:'parent',greet:'Are you Arjun\'s teacher? I need to talk to you.',
    look:{color:4,skin:3,hair:1,hc:1,outfit:2,pc:0,acc:0,model:'av-f-6-5-3-0-3-1-12-0'}}],
  meeting:[
-  {id:'okafor',name:'Mr. Okafor',tag:'Team lead',x:10,y:14,dir:'down',sc:'team',greet:'Grab a seat, our team meeting is about to start.',
+  {id:'okafor',name:'Mr. Okafor',tag:'Team lead',x:10,y:14,dir:'up',sit:true,reach:4.6,sc:'team',greet:'Grab a seat, our team meeting is about to start.',
    look:{color:6,skin:4,hair:0,hc:1,outfit:3,pc:2,acc:0,model:'av-m-9-9-4-0-0-1-0-0'}},
-  {id:'chen',name:'Ms. Chen',tag:'Specialist',x:15,y:14,dir:'down',sc:'team',greet:'I brought the reading data for Sofia.',
+  {id:'chen',name:'Ms. Chen',tag:'Specialist',x:15,y:14,dir:'up',sit:true,reach:4.6,sc:'team',greet:'I brought the reading data for Sofia.',
    look:{color:3,skin:0,hair:1,hc:1,outfit:3,pc:0,acc:3,model:'av-f-8-7-4-0-3-2-6-0'}}],
  quad:[
   {id:'maya',name:'Maya',tag:'Student',x:15,y:12,dir:'right',sc:'recess',greet:'It was OUR turn with the ball!',
@@ -171,15 +171,25 @@ const SC={
 const cache={};
 function npcsFor(mapId){if(cache[mapId])return cache[mapId];
  cache[mapId]=(NPCS[mapId]||[]).map((n,i)=>Object.assign({id:'npc-'+n.id,npcId:n.id,sc:n.sc,greet:n.greet,tag:n.tag,name:n.name,
-  x:n.x+.5,y:n.y+.5,rx:n.x+.5,ry:n.y+.5,dir:n.dir,moving:false,hand:false,voice:false,mic:false,speaking:false,role:'npc',seed:i*1.7+.3},n.look));
+  x:n.x+.5,y:n.y+.5,rx:n.x+.5,ry:n.y+.5,dir:n.dir,sit:!!n.sit,reach:n.reach,moving:false,hand:false,voice:false,mic:false,speaking:false,role:'npc',seed:i*1.7+.3},n.look));
  return cache[mapId];}
 /* mark NPC tiles as solid so people walk around them (value 15 is drawn as plain floor) */
 function block(mapId,G){for(const n of NPCS[mapId]||[])if(G[n.y]&&G[n.y][n.x]===0)G[n.y][n.x]=15;}
 function hit(mapId,x,y){for(const p of npcsFor(mapId))if(Math.hypot(p.x-x,p.y-y)<.75)return p;return null;}
-function nearest(mapId,x,y,r){let best=null,bd=r||1.7;for(const p of npcsFor(mapId)){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;best=p;}}return best;}
+function nearest(mapId,x,y,r){let best=null,bs=1;for(const p of npcsFor(mapId)){const lim=Math.max(r||1.7,p.reach||0),s=Math.hypot(p.x-x,p.y-y)/lim;if(s<bs){bs=s;best=p;}}return best;}
 /* a free tile next to the NPC, for click-to-walk */
 function approach(mapId,p,G){const tx=Math.floor(p.x),ty=Math.floor(p.y);
  for(const [dx,dy] of [[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,1]]){const x=tx+dx,y=ty+dy;if(G[y]&&G[y][x]===0)return [x,y];}return null;}
+
+/* ---------- chairs you can sit on (tile value 17) ---------- */
+const CHAIR=17,TABLE=16;
+function chairFacing(G,x,y){if(G[y+1]&&G[y+1][x]===TABLE)return'down';if(G[y-1]&&G[y-1][x]===TABLE)return'up';if(G[y][x+1]===TABLE)return'right';if(G[y][x-1]===TABLE)return'left';return'down';}
+function isChair(G,x,y){return !!(G[y]&&G[y][x]===CHAIR);}
+function seatTaken(list,me,x,y){return list.some(p=>p!==me&&p.sit&&Math.floor(p.x)===x&&Math.floor(p.y)===y);}
+function sitOn(me,G,x,y){me.sit={x,y};me.path=null;me.moving=false;me.x=me.rx=x+.5;me.y=me.ry=y+.5;me.dir=chairFacing(G,x,y);}
+/* stand up onto a free tile next to the chair, away from the table if possible */
+function standUp(me,G){const s=me.sit;me.sit=null;if(!s)return;const f=chairFacing(G,s.x,s.y),back={down:[0,-1],up:[0,1],right:[-1,0],left:[1,0]}[f];
+ for(const [dx,dy] of [back,[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){const x=s.x+dx,y=s.y+dy;if(G[y]&&G[y][x]===0){me.x=me.rx=x+.5;me.y=me.ry=y+.5;return;}}}
 
 /* ---------- UI ---------- */
 let host=null,ui=null,cur=null,near=null,onOpen=null,onClose=null;
@@ -284,7 +294,7 @@ function update(mapId,me){if(!me)return;mount();
  const talker=nearest(mapId,me.x,me.y,4);
  for(const p of list){const d=Math.hypot(p.x-me.x,p.y-me.y);
   if(p===talker&&!cur){p.bubble=p.greet;p.bubbleT=now+400;}
-  if(d<4){const dx=me.x-p.x,dy=me.y-p.y;p.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');}}
+  if(d<4&&!p.sit){const dx=me.x-p.x,dy=me.y-p.y;p.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');}}
  const n=cur?null:nearest(mapId,me.x,me.y,1.7);
  if(n!==near){near=n;if(n){ui.pr.innerHTML='';ui.pr.append(document.createTextNode('Talk to '+n.name+' '));ui.pr.appendChild(el('kbd',null,'T'));}ui.pr.classList.toggle('hidden',!n);}}
 /* badge shown above people who are in a simulation (seen by everyone in the room) */
@@ -295,6 +305,6 @@ function drawBusy(c,x,y,t){c.save();c.font='800 10px Nunito,sans-serif';const la
  c.globalAlpha=1;c.textAlign='left';c.textBaseline='middle';c.fillText(label,x-w/2+24,y-h/2+.5);c.restore();}
 function hide(){if(ui){ui.pr.classList.add('hidden');}near=null;if(cur)close();}
 
-return {drawBusy,npcsFor,block,hit,nearest,approach,update,open,close,hide,isOpen:()=>!!cur,
+return {seat:{isChair,seatTaken,sitOn,standUp,chairFacing},drawBusy,npcsFor,block,hit,nearest,approach,update,open,close,hide,isOpen:()=>!!cur,
  init(o){onOpen=o&&o.onOpen;onClose=o&&o.onClose;},SC,NPCS};
 })();
